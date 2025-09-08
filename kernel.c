@@ -30,35 +30,65 @@ typedef struct vga_color_t {
 
 #define VGA_COLOR(color) (color.background << 4 | color.foreground)
 
-void vga_clear_color(vga_color_t color)
-{
-    for (short y = 0; y < VGA_HEIGHT; ++y)
-    {
-        for (short x = 0; x < VGA_WIDTH; ++x)
-        {
-            VGA_POINTER[VGA_WIDTH * y + x] = VGA_COLOR(color) << 8 | 0x0;
-        }
-    }
-}
+typedef struct vga_point_t {
+    int x;
+    int y;
+} vga_point_t;
+
+typedef struct vga_t {
+    vga_point_t cursor;
+    vga_color_t color;
+} vga_t;
 
 typedef enum vga_result_t {
     VGA_OK,
     VGA_OUT_OF_BOUNDS
 } vga_result_t;
 
-vga_result_t vga_put_char(int x, int y, char character, vga_color_t color)
+vga_result_t vga_set_cursor(vga_t* vga, vga_point_t point)
 {
-    if (x < 0 || x >= VGA_WIDTH ||
-        y < 0 || y >= VGA_HEIGHT) return VGA_OUT_OF_BOUNDS;
-    VGA_POINTER[y * VGA_WIDTH + x] = VGA_COLOR(color) << 8 | character;
+    if (point.x < 0 || point.x >= VGA_WIDTH ||
+        point.y < 0 || point.y >= VGA_HEIGHT) return VGA_OUT_OF_BOUNDS;
+    vga->cursor = point;
     return VGA_OK;
 }
 
-vga_result_t vga_put_string(int x, int y, const char* string, vga_color_t color)
+vga_result_t vga_set_color(vga_t* vga, vga_color_t color)
+{
+    vga->color = color;
+    return VGA_OK;
+}
+
+void vga_clear_color(vga_t* vga)
+{
+    vga->cursor.x = 0;
+    vga->cursor.y = 0;
+    for (vga->cursor.y = 0; vga->cursor.y < VGA_HEIGHT; ++vga->cursor.y)
+    {
+        for (vga->cursor.x = 0; vga->cursor.x < VGA_WIDTH; ++vga->cursor.x)
+        {
+            VGA_POINTER[VGA_WIDTH * vga->cursor.y + vga->cursor.x] = VGA_COLOR(vga->color) << 8 | 0x0;
+        }
+    }
+}
+
+vga_result_t vga_put_char(vga_t* vga, char character)
+{
+    VGA_POINTER[VGA_WIDTH * vga->cursor.y + vga->cursor.x] = VGA_COLOR(vga->color) << 8 | character;
+    return VGA_OK;
+}
+
+vga_result_t vga_put_string(vga_t* vga, const char* string)
 {
     for (int i = 0; string[i] != '\0'; ++i)
     {
-        vga_result_t result = vga_put_char(x + i, y, string[i], color);
+        vga_result_t result = vga_put_char(vga, string[i]);
+        if (result != VGA_OK) return result;
+        vga_point_t next_point = {
+            .x = vga->cursor.x + 1,
+            .y = vga->cursor.y
+        };
+        result = vga_set_cursor(vga, next_point);
         if (result != VGA_OK) return result;
     }
     return VGA_OK;
@@ -66,16 +96,20 @@ vga_result_t vga_put_string(int x, int y, const char* string, vga_color_t color)
 
 void kernel_main()
 {
-    const char* message = "BABABOOEY";
-
-    vga_clear_color((vga_color_t){.background = VGA_COLOR_GREEN});
+    vga_t vga;
+    vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_GREEN});
+    vga_clear_color(&vga);
 
     for (int i = 0; i < 10; ++i)
     {
-        vga_put_char(i, i, 0x41 + i, (vga_color_t){.background = VGA_COLOR_GREEN, .foreground = VGA_COLOR_BLACK});
+        vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_GREEN, .foreground = VGA_COLOR_BLACK});
+        vga_set_cursor(&vga, (vga_point_t){.x = i, .y = i});
+        vga_put_char(&vga, 0x41 + i);
     }
 
-    vga_put_string(20, 5, message, (vga_color_t){.background = VGA_COLOR_GREEN, .foreground = VGA_COLOR_PINK});
+    vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_BLACK, .foreground = VGA_COLOR_PINK});
+    vga_set_cursor(&vga, (vga_point_t){.x = 75, .y = 5});
+    vga_put_string(&vga, "BABABOOEY");
 
     while (1) { __asm__ __volatile__("hlt"); }
 }
