@@ -108,6 +108,13 @@ terminal_result_t terminal_create(terminal_t* out, display_driver_t* driver)
         .overflow = TERMINAL_OVERFLOW_NEW_LINE,
         .scroll = TERMINAL_SCROLL_VERTICAL
     };
+    terminal_render(&t);
     *out = t;
     return TERMINAL_RESULT_OK;
+}
+
+terminal_t terminal;
+void terminal_module_init(display_driver_t* driver)
+{
+    terminal_create(&terminal, driver);
 }

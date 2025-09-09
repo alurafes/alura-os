@@ -3,6 +3,7 @@
         "stdint.h": "c",
         "stddef.h": "c",
         "terminal.h": "c",
-        "display_driver.h": "c"
+        "display_driver.h": "c",
+        "stdarg.h": "c"
     }
 }

@@ -33,4 +33,7 @@ gdt_result_t gdt_create(gdt_t* gdt);
 gdt_result_t gdt_set_entry(gdt_t* gdt, int index, uint32_t base, uint32_t limit, uint8_t access, uint8_t granularity);
 extern void gdt_flush(uint32_t);
 
+extern gdt_t gdt;
+void gdt_module_init();
+
 #endif // ALURA_GDT_H

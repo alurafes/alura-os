@@ -45,4 +45,7 @@ terminal_result_t terminal_put_char(terminal_t* terminal, char character);
 terminal_result_t terminal_put_string(terminal_t* terminal, const char* string);
 terminal_result_t terminal_render(terminal_t* terminal);
 
+extern terminal_t terminal;
+void terminal_module_init(display_driver_t* driver);
+
 #endif // ALURA_TERMINAL_H

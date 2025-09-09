@@ -30,3 +30,9 @@ gdt_result_t gdt_set_entry(gdt_t* gdt, int index, uint32_t base, uint32_t limit,
     gdt->entries[index].access = access;
     return GDT_RESULT_OK;
 }
+
+gdt_t gdt;
+void gdt_module_init()
+{
+    gdt_create(&gdt);
+}

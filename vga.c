@@ -21,3 +21,9 @@ vga_result_t vga_create(vga_t* out)
     out->driver.put_char = vga_put_char;
     return VGA_RESULT_OK;
 }
+
+vga_t vga;
+void vga_module_init()
+{
+    vga_create(&vga);
+}
