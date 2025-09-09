@@ -2,6 +2,7 @@
 #define ALURA_KERNEL_H
 
 #include "gdt.h"
+#include "terminal.h"
 #include "vga.h"
 
 typedef enum kernel_result_t {
@@ -9,6 +10,7 @@ typedef enum kernel_result_t {
 } kernel_result_t;
 
 typedef struct kernel_t {
+    terminal_t terminal;
     vga_t vga;
     gdt_t gdt;
 } kernel_t;

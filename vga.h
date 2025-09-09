@@ -2,6 +2,7 @@
 #define ALURA_VGA_H
 
 #include <stdint.h>
+#include "display_driver.h"
 
 #define VGA_BUFFER 0xB8000
 #define VGA_WIDTH 80
@@ -32,43 +33,17 @@ typedef struct vga_color_t {
 
 #define VGA_COLOR(color) (color.background << 4 | color.foreground)
 
-typedef struct vga_point_t {
-    int x;
-    int y;
-} vga_point_t;
-
 typedef enum vga_result_t {
     VGA_RESULT_OK,
-    VGA_RESULT_OUT_OF_BOUNDS,
-    VGA_RESULT_NULL
 } vga_result_t;
 
-typedef enum vga_overflow_t {
-    VGA_OVERFLOW_NONE,
-    VGA_OVERFLOW_WRAP,
-    VGA_OVERFLOW_NEW_LINE,
-} vga_overflow_t;
-
-typedef enum vga_scroll_t {
-    VGA_SCROLL_NONE,
-    VGA_SCROLL_VERTICAL,
-} vga_scroll_t;
-
 typedef struct vga_t {
-    vga_point_t cursor;
+    display_driver_t driver;
     vga_color_t color;
-    vga_overflow_t overflow;
-    vga_scroll_t scroll;
 } vga_t;
 
-vga_result_t vga_create(vga_t* vga);
-vga_result_t vga_set_cursor(vga_t* vga, vga_point_t point);
+vga_result_t vga_create(vga_t* out);
 vga_result_t vga_set_color(vga_t* vga, vga_color_t color);
-vga_result_t vga_clear_color(vga_t* vga);
-vga_result_t vga_put_char(vga_t* vga, char character);
-vga_result_t vga_put_string(vga_t* vga, const char* string);
-vga_result_t vga_set_overflow(vga_t* vga, vga_overflow_t overflow);
-vga_result_t vga_set_scroll(vga_t* vga, vga_scroll_t scroll);
-vga_result_t vga_scroll(vga_t* vga);
+void vga_put_char(display_driver_t* driver, char character, unsigned int x, unsigned int y);
 
 #endif // ALURA_VGA_H

@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "stdint.h": "c",
-        "stddef.h": "c"
+        "stddef.h": "c",
+        "terminal.h": "c",
+        "display_driver.h": "c"
     }
 }

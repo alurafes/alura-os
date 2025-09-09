@@ -19,7 +19,7 @@ ISODIR   := $(BUILDDIR)/iso/boot
 
 # Sources
 
-C_SOURCES := kernel.c vga.c gdt.c
+C_SOURCES := kernel.c vga.c gdt.c terminal.c
 ASM_SOURCES := boot.s gdt_flush.s
 
 # Objects
