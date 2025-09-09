@@ -45,7 +45,7 @@ iso: link
 	$(GRUB) -o $(BUILDDIR)/kernel.iso $(BUILDDIR)/iso
 
 run: iso
-	$(QEMU) -cdrom $(BUILDDIR)/kernel.iso -s -S
+	$(QEMU) -cdrom $(BUILDDIR)/kernel.iso
 
 clean:
 	rm -rf $(BUILDDIR)/*.o $(ISODIR)/kernel.elf $(BUILDDIR)/kernel.iso

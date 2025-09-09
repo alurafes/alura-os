@@ -62,6 +62,14 @@ section .text
 global _start
 extern kernel_main
 _start:
+	mov dx, 0x3D4 ; remove cursor. copied from osdev. gotta figure this stuff later
+	mov al, 0xA
+	out dx, al
+
+	inc dx
+	mov al, 0x20
+	out dx, al
+
     cli
     mov esp, stack_top
     call kernel_main

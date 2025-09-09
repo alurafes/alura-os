@@ -26,7 +26,13 @@ vga_result_t vga_set_cursor(vga_t* vga, vga_point_t point)
                 break;
             case VGA_OVERFLOW_NEW_LINE:
                 point.x = 0;
-                point.y = point.y + 1 >= VGA_HEIGHT ? 0 : point.y + 1;
+                if (point.y + 1 >= VGA_HEIGHT)
+                {
+                    vga_scroll(vga);
+                    point.y = VGA_HEIGHT - 1;
+                } else {
+                    point.y += 1;
+                }
                 break;
             }
         }
@@ -48,7 +54,7 @@ vga_result_t vga_clear_color(vga_t* vga)
     {
         for (vga->cursor.x = 0; vga->cursor.x < VGA_WIDTH; ++vga->cursor.x)
         {
-            VGA_POINTER[VGA_WIDTH * vga->cursor.y + vga->cursor.x] = VGA_COLOR(vga->color) << 8 | 0x0;
+            VGA_POINTER[VGA_WIDTH * vga->cursor.y + vga->cursor.x] = VGA_COLOR(vga->color) << 8 | 0x20;
         }
     }
     return VGA_RESULT_OK;
@@ -56,7 +62,19 @@ vga_result_t vga_clear_color(vga_t* vga)
 
 vga_result_t vga_put_char(vga_t* vga, char character)
 {
+    switch (character) {
+        case '\n': {
+            vga_set_cursor(vga, (vga_point_t){0, vga->cursor.y + 1});
+            return VGA_RESULT_OK;
+        }
+    }
     VGA_POINTER[VGA_WIDTH * vga->cursor.y + vga->cursor.x] = VGA_COLOR(vga->color) << 8 | character;
+    vga_point_t next_point = {
+        .x = vga->cursor.x + 1,
+        .y = vga->cursor.y
+    };
+    vga_result_t result = vga_set_cursor(vga, next_point);
+    if (result != VGA_RESULT_OK) return result;
     return VGA_RESULT_OK;
 }
 
@@ -65,12 +83,6 @@ vga_result_t vga_put_string(vga_t* vga, const char* string)
     for (int i = 0; string[i] != '\0'; ++i)
     {
         vga_result_t result = vga_put_char(vga, string[i]);
-        if (result != VGA_RESULT_OK) return result;
-        vga_point_t next_point = {
-            .x = vga->cursor.x + 1,
-            .y = vga->cursor.y
-        };
-        result = vga_set_cursor(vga, next_point);
         if (result != VGA_RESULT_OK) return result;
     }
     return VGA_RESULT_OK;
@@ -90,11 +102,16 @@ vga_result_t vga_set_scroll(vga_t* vga, vga_scroll_t scroll)
 
 vga_result_t vga_scroll(vga_t* vga)
 {
-    switch (vga->scroll)
+    for (int y = 1; y < VGA_HEIGHT; ++y)
     {
-        case (VGA_SCROLL_VERTICAL): {
-            
-            break;
+        for (int x = 0; x < VGA_WIDTH; ++x)
+        {
+            VGA_POINTER[(y - 1) * VGA_WIDTH + x] = VGA_POINTER[y * VGA_WIDTH + x];
         }
     }
+    for (int x = 0; x < VGA_WIDTH; ++x)
+    {
+        VGA_POINTER[(VGA_HEIGHT - 1) * VGA_WIDTH + x] = VGA_COLOR(vga->color) << 8 | 0x20;
+    }
+    return VGA_RESULT_OK;
 }
