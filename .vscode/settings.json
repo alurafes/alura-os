@@ -5,6 +5,7 @@
         "terminal.h": "c",
         "display_driver.h": "c",
         "stdarg.h": "c",
-        "gdt.h": "c"
+        "gdt.h": "c",
+        "print.h": "c"
     }
 }

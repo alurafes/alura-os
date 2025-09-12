@@ -1,11 +1,17 @@
 #include "idt.h"
 
+#include "print.h"
+#include "vga.h"
+
 idt_result_t idt_create(idt_t* idt)
 {
     idt->pointer.limit = sizeof(idt->entries) - 1;
     idt->pointer.base = (uint32_t)&idt->entries;
 
-    // todo: actually create interrupt handlers
+    for (int i = 0; i < IDT_ENTRIES_COUNT; ++i)
+    {
+        idt_set_entry(idt, i, (uint32_t)isr_stubs[i], 0x08, 0x8E); // 0b10001111 - 1 - present | 00 - kernel | 0 - zero | 1110 - interrupt gate
+    }
 
     idt_flush(&idt->pointer);
     return IDT_RESULT_OK;
@@ -27,6 +33,14 @@ idt_result_t idt_set_entry(idt_t* idt, int index, uint32_t offset, uint16_t segm
 void idt_flush(idt_pointer_t* pointer)
 {
     __asm__ volatile ("lidt (%0)" : : "r"(pointer));
+}
+
+void isr_handler(isr_interrupt_data* data)
+{
+    vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_BLACK, .foreground = VGA_COLOR_RED});
+    printf("\n\nInterrupt #%x: Error Code: %x\nRegisters:\ngs = %x, fs = %x, es = %x, ds = %x\nedi = %x, esi = %x, ebp = %x, esp = %x, ebx = %x, edx = %x, ecx = %x, eax = %x\neip = %x, cs = %x, eflags = %x, useresp = %x, ss = %x", data->interrupt_index, data->error_code, data->gs, data->fs, data->es, data->ds, data->edi, data->esi, data->ebp, data->esp, data->ebx, data->edx, data->ecx, data->eax, data->eip, data->cs, data->eflags, data->useresp, data->ss);
+    for(;;) asm("hlt");
+    vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_DARK_GRAY, .foreground = VGA_COLOR_CYAN});
 }
 
 idt_t idt;

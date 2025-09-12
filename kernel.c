@@ -16,9 +16,13 @@ void kernel_main()
 
     terminal_render(&terminal);
 
-    printf("GDT at: %x\nIDT at: %x\nVGA at: %x\nTerminal at: %x", &gdt, &idt, &vga, &terminal);
+    printf("GDT at: %x\nIDT at: %x\nVGA at: %x\nTerminal at: %x\n", &gdt, &idt, &vga, &terminal);
+    
+    int a = 10 / 0;
+
+    __asm__ volatile("cli"); // test interrupt
 
     while (1) {  
-        __asm__ __volatile__("hlt"); 
+        __asm__ volatile("hlt"); 
     }
 }

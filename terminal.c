@@ -43,8 +43,7 @@ terminal_result_t terminal_put_char(terminal_t* terminal, char character)
         .x = terminal->cursor.x + 1,
         .y = terminal->cursor.y
     };
-    terminal_result_t result = terminal_set_cursor(terminal, next_point);
-    if (result != TERMINAL_RESULT_OK) return result;
+    terminal_set_cursor(terminal, next_point);
     return TERMINAL_RESULT_OK;
 }
 

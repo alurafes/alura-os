@@ -20,7 +20,7 @@ ISODIR   := $(BUILDDIR)/iso/boot
 # Sources
 
 C_SOURCES := kernel.c vga.c gdt.c terminal.c print.c idt.c
-ASM_SOURCES := boot.s
+ASM_SOURCES := boot.s isr_stubs.s isr_stub_handler.s
 
 # Objects
 

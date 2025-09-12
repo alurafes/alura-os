@@ -35,4 +35,15 @@ void idt_flush(idt_pointer_t* pointer);
 extern idt_t idt;
 void idt_module_init();
 
+extern void* isr_stubs[];
+
+typedef struct isr_interrupt_data {
+    uint32_t gs, fs, es, ds;
+    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
+    uint32_t interrupt_index, error_code;
+    uint32_t eip, cs, eflags, useresp, ss;
+} __attribute__((packed)) isr_interrupt_data;
+
+void isr_handler(isr_interrupt_data* data);
+
 #endif // ALURA_IDT_H
