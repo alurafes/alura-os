@@ -8,10 +8,8 @@ gdt_result_t gdt_create(gdt_t* gdt)
     gdt_set_entry(gdt, 0, 0, 0, 0, 0); // Null
     gdt_set_entry(gdt, 1, 0, 0xFFFFFFFF, 0x9A, 0xCF); // Kernel Code 0b10011010 - Present: 1 | Kernel: 00 | S: 1 | Executable: 1 | Clear: 0, Read: 1, A: 0
     gdt_set_entry(gdt, 2, 0, 0xFFFFFFFF, 0x92, 0xCF); // Kernel Data 0b10010010 - Present: 1 | Kernel: 00 | S: 1 | Executable: 0 | Grows Up: 0, Write: 1, A: 0
-    gdt_set_entry(gdt, 3, 0, 0xFFFFFFFF, 0xFA, 0xCF); // User Code 0b11111010 - Present: 1 | Kernel: 00 | S: 1 | Executable: 1 | Clear: 0, Read: 1, A: 0
-    gdt_set_entry(gdt, 4, 0, 0xFFFFFFFF, 0xF2, 0xCF); // User Data 0b11110010 - Present: 1 | Kernel: 00 | S: 1 | Executable: 0 | Grows Up: 0, Write: 1, A: 0
 
-    gdt_flush((uint32_t)&gdt->pointer);
+    gdt_flush(&gdt->pointer);
     return GDT_RESULT_OK;
 }
 
@@ -29,6 +27,24 @@ gdt_result_t gdt_set_entry(gdt_t* gdt, int index, uint32_t base, uint32_t limit,
 
     gdt->entries[index].access = access;
     return GDT_RESULT_OK;
+}
+
+void gdt_flush(gdt_pointer_t* pointer)
+{
+    __asm__ volatile (
+        "lgdt (%0)\n\t"
+        "mov $0x10, %%ax\n\t"
+        "mov %%ax, %%ds\n\t"
+        "mov %%ax, %%es\n\t"
+        "mov %%ax, %%fs\n\t"
+        "mov %%ax, %%gs\n\t"
+        "mov %%ax, %%ss\n\t"
+        "ljmp $0x08, $1f\n\t"
+        "1:\n\t"
+        :
+        : "r"(pointer)
+        : "ax", "memory"
+    );
 }
 
 gdt_t gdt;

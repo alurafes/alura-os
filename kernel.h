@@ -2,6 +2,7 @@
 #define ALURA_KERNEL_H
 
 #include "gdt.h"
+#include "idt.h"
 #include "terminal.h"
 #include "vga.h"
 #include "print.h"

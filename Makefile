@@ -19,8 +19,8 @@ ISODIR   := $(BUILDDIR)/iso/boot
 
 # Sources
 
-C_SOURCES := kernel.c vga.c gdt.c terminal.c print.c
-ASM_SOURCES := boot.s gdt_flush.s
+C_SOURCES := kernel.c vga.c gdt.c terminal.c print.c idt.c
+ASM_SOURCES := boot.s
 
 # Objects
 
@@ -45,7 +45,7 @@ iso: link
 	$(GRUB) -o $(BUILDDIR)/kernel.iso $(BUILDDIR)/iso
 
 run: iso
-	$(QEMU) -cdrom $(BUILDDIR)/kernel.iso
+	$(QEMU) -cdrom $(BUILDDIR)/kernel.iso -s -S
 
 clean:
 	rm -rf $(BUILDDIR)/*.o $(ISODIR)/kernel.elf $(BUILDDIR)/kernel.iso
