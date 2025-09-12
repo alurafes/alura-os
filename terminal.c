@@ -43,7 +43,8 @@ terminal_result_t terminal_put_char(terminal_t* terminal, char character)
         .x = terminal->cursor.x + 1,
         .y = terminal->cursor.y
     };
-    terminal_set_cursor(terminal, next_point);
+    terminal_result_t result = terminal_set_cursor(terminal, next_point);
+    if (result != TERMINAL_RESULT_OK) return result;
     return TERMINAL_RESULT_OK;
 }
 
@@ -90,7 +91,13 @@ terminal_result_t terminal_render(terminal_t* terminal)
     {
         for (int x = 0; x < TERMINAL_WIDTH; ++x)
         {
-            terminal->driver->put_char(terminal->driver, terminal->buffer[y * TERMINAL_WIDTH + x], x, y);
+            char character = terminal->buffer[y * TERMINAL_WIDTH + x];
+            switch (character) {
+                case '\n': {
+                    character = 0x20;
+                }
+            }
+            terminal->driver->put_char(terminal->driver, character, x, y);
         }
     }
 }

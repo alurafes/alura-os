@@ -6,6 +6,7 @@
 #include "terminal.h"
 #include "vga.h"
 #include "print.h"
+#include "pic.h"
 
 #include <stdint.h>
 #include <stddef.h>

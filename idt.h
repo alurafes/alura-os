@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include "pic.h"
+
 #define IDT_ENTRIES_COUNT 256
 
 typedef enum idt_result_t {

@@ -37,10 +37,37 @@ void idt_flush(idt_pointer_t* pointer)
 
 void isr_handler(isr_interrupt_data* data)
 {
-    vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_BLACK, .foreground = VGA_COLOR_RED});
-    printf("\n\nInterrupt #%x: Error Code: %x\nRegisters:\ngs = %x, fs = %x, es = %x, ds = %x\nedi = %x, esi = %x, ebp = %x, esp = %x, ebx = %x, edx = %x, ecx = %x, eax = %x\neip = %x, cs = %x, eflags = %x, useresp = %x, ss = %x", data->interrupt_index, data->error_code, data->gs, data->fs, data->es, data->ds, data->edi, data->esi, data->ebp, data->esp, data->ebx, data->edx, data->ecx, data->eax, data->eip, data->cs, data->eflags, data->useresp, data->ss);
-    for(;;) asm("hlt");
-    vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_DARK_GRAY, .foreground = VGA_COLOR_CYAN});
+    // exception
+    if (data->interrupt_index < PIC1_REMAPPED_VECTOR)
+    {
+        vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_RED, .foreground = VGA_COLOR_BLACK});
+        printf("\n\nException #%x: Error Code: %x\nRegisters:\ngs = %x, fs = %x, es = %x, ds = %x\nedi = %x, esi = %x, ebp = %x, esp = %x, ebx = %x, edx = %x, ecx = %x, eax = %x\neip = %x, cs = %x, eflags = %x, useresp = %x, ss = %x", data->interrupt_index, data->error_code, data->gs, data->fs, data->es, data->ds, data->edi, data->esi, data->ebp, data->esp, data->ebx, data->edx, data->ecx, data->eax, data->eip, data->cs, data->eflags, data->useresp, data->ss);
+        for(;;) asm("hlt");
+    }
+    // irq
+    if (data->interrupt_index >= PIC1_REMAPPED_VECTOR || data->interrupt_index < PIC2_REMAPPED_VECTOR + 8)
+    {
+        int irq = data->interrupt_index - PIC1_REMAPPED_VECTOR;
+        
+        switch (irq)
+        {
+            case 1: {
+                uint8_t scancode = io_inb(0x60);
+                printf("Scancode: %x\n", scancode);
+                break;
+            }
+            case 12: {
+                printf("Mouse\n");
+                break;
+            }
+        }
+
+        pic_send_eoi(irq);
+    }
+    else
+    {
+        // software interrupt
+    }
 }
 
 idt_t idt;

@@ -6,6 +6,8 @@
         "display_driver.h": "c",
         "stdarg.h": "c",
         "gdt.h": "c",
-        "print.h": "c"
+        "print.h": "c",
+        "kernel.h": "c",
+        "pic.h": "c"
     }
 }

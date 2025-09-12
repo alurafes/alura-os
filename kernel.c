@@ -3,9 +3,12 @@
 kernel_result_t kernel_initialize()
 {
     gdt_module_init();
+    pic_init_module();
     idt_module_init();
+    __asm__ volatile("sti");
     vga_module_init();
     terminal_module_init(&vga.driver);
+    pic_print_masks();
 }
 
 void kernel_main()
@@ -17,10 +20,6 @@ void kernel_main()
     terminal_render(&terminal);
 
     printf("GDT at: %x\nIDT at: %x\nVGA at: %x\nTerminal at: %x\n", &gdt, &idt, &vga, &terminal);
-    
-    int a = 10 / 0;
-
-    __asm__ volatile("cli"); // test interrupt
 
     while (1) {  
         __asm__ volatile("hlt"); 
