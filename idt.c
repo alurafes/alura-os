@@ -56,10 +56,6 @@ void isr_handler(isr_interrupt_data* data)
                 printf("Scancode: %x\n", scancode);
                 break;
             }
-            case 12: {
-                printf("Mouse\n");
-                break;
-            }
         }
 
         pic_send_eoi(irq);

@@ -1,6 +1,8 @@
 #ifndef ALURA_KERNEL_H
 #define ALURA_KERNEL_H
 
+#include "multiboot.h"
+
 #include "gdt.h"
 #include "idt.h"
 #include "terminal.h"

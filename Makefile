@@ -8,7 +8,7 @@ QEMU    := qemu-system-x86_64
 
 # Build Flags
 
-CFLAGS  := -m32 -ffreestanding -c
+CFLAGS  := -m32 -ffreestanding -c -g
 ASFLAGS := -f elf32
 LDFLAGS := -m elf_i386 -n -T linker.ld
 
@@ -45,7 +45,7 @@ iso: link
 	$(GRUB) -o $(BUILDDIR)/kernel.iso $(BUILDDIR)/iso
 
 run: iso
-	$(QEMU) -cdrom $(BUILDDIR)/kernel.iso -s -S
+	$(QEMU) -cdrom $(BUILDDIR)/kernel.iso -s -S -m 32M
 
 clean:
 	rm -rf $(BUILDDIR)/*.o $(ISODIR)/kernel.elf $(BUILDDIR)/kernel.iso
