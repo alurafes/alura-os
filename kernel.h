@@ -9,6 +9,7 @@
 #include "vga.h"
 #include "print.h"
 #include "pic.h"
+#include "memory_bitmap.h"
 
 #include <stdint.h>
 #include <stddef.h>
@@ -18,7 +19,7 @@ typedef enum kernel_result_t {
     KERNEL_RESULT_OK
 } kernel_result_t;
 
-kernel_result_t kernel_initialize();
+kernel_result_t kernel_initialize(multiboot_info_t* multiboot);
 void kernel_main();
 
 #endif // ALURA_KERNEL_H
