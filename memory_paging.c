@@ -57,10 +57,11 @@ void memory_paging_module_init(memory_bitmap_t* bitmap)
     page_directory = memory_bitmap_allocate();
     if (page_directory == NULL) return; // Panic or somethin
     memory_paging_reset_entry(page_directory);
+
     memory_paging_map_first_megabyte();
     memory_paging_map_kernel();
     memory_paging_map_memory_bitmap(bitmap);
-    // memory_paging_map_low_memory();
+    
     memory_paging_enable();
 }
 

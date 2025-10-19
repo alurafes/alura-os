@@ -4,7 +4,7 @@ CC      := gcc
 AS      := nasm
 LD      := ld
 GRUB    := grub2-mkrescue
-QEMU    := qemu-system-x86_64
+QEMU    := qemu-system-i386
 
 # Build Flags
 
@@ -19,7 +19,7 @@ ISODIR   := $(BUILDDIR)/iso/boot
 
 # Sources
 
-C_SOURCES := kernel.c vga.c gdt.c terminal.c print.c idt.c pic.c memory_bitmap.c memory_paging.c
+C_SOURCES := kernel.c vga.c gdt.c terminal.c print.c idt.c pic.c memory_bitmap.c memory_paging.c kernel_heap.c
 ASM_SOURCES := boot.s isr_stubs.s isr_stub_handler.s
 
 # Objects
@@ -45,7 +45,7 @@ iso: link
 	$(GRUB) -o $(BUILDDIR)/kernel.iso $(BUILDDIR)/iso
 
 run: iso
-	$(QEMU) -cdrom $(BUILDDIR)/kernel.iso -s -S -m 1024M -d int -no-reboot
+	$(QEMU) -cdrom $(BUILDDIR)/kernel.iso -s -S -m 256M -d int
 
 clean:
 	rm -rf $(BUILDDIR)/*.o $(ISODIR)/kernel.elf $(BUILDDIR)/kernel.iso

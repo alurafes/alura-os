@@ -11,6 +11,7 @@
 #include "pic.h"
 #include "memory_bitmap.h"
 #include "memory_paging.h"
+#include "kernel_heap.h"
 
 #include <stdint.h>
 #include <stddef.h>
