@@ -67,6 +67,18 @@ void* kernel_heap_malloc(size_t size)
     return NULL;
 }
 
+void* kernel_heap_calloc(size_t size)
+{
+    void* memory = kernel_heap_malloc(size);
+    if (memory == NULL) return NULL;
+    // todo: move this to memset or something
+    char* ptr = (char*)memory;
+    while (size--) {
+        *ptr++ = 0;
+    }
+    return memory;
+}
+
 void kernel_heap_free(void* address)
 {
     if (address == NULL) return;

@@ -10,6 +10,7 @@
 #define KERNEL_HEAP_VIRTUAL_END 0x07000000
 
 void* kernel_heap_malloc(size_t size);
+void* kernel_heap_calloc(size_t size);
 void kernel_heap_free(void* address);
 
 void kernel_heap_module_init(uintptr_t heap_start, uintptr_t heap_end);
