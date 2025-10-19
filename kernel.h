@@ -10,6 +10,7 @@
 #include "print.h"
 #include "pic.h"
 #include "memory_bitmap.h"
+#include "memory_paging.h"
 
 #include <stdint.h>
 #include <stddef.h>

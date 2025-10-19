@@ -31,7 +31,7 @@ void pic_remap(int offset_master, int offset_slave)
     io_wait();
 }
 
-void pic_init_module()
+void pic_module_init()
 {
     pic_remap(PIC1_REMAPPED_VECTOR, PIC2_REMAPPED_VECTOR);
 }

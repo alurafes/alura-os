@@ -1,10 +1,33 @@
 #include "memory_bitmap.h"
 
+void memory_bitmap_lock_first_megabyte(memory_bitmap_t* bitmap)
+{
+    size_t last_page = 0x100000 / PAGE_SIZE;
+    for (size_t page = 0; page < last_page; ++page)
+    {
+        BITMAP_SET(bitmap->entries, page);
+    }
+}
+
+void memory_bitmap_lock_kernel(memory_bitmap_t* bitmap)
+{
+    size_t page = (uint32_t)&_kernel_start / PAGE_SIZE;
+    size_t last_page = ((uint32_t)&_kernel_end + PAGE_SIZE - 1) / PAGE_SIZE;
+    for (; page < last_page; ++page)
+    {
+        BITMAP_SET(bitmap->entries, page);
+    }
+}
+void memory_bitmap_lock_bitmap(memory_bitmap_t* bitmap)
+{
+    size_t bitmap_start_page = (uint32_t)bitmap->entries / PAGE_SIZE;
+    for (size_t page = 0; page < bitmap->pages; ++page)
+    {
+        BITMAP_SET(bitmap->entries, bitmap_start_page + page);
+    }
+}
+
 memory_bitmap_t memory_bitmap;
-
-extern char _kernel_start;
-extern char _kernel_end;
-
 void memory_bitmap_module_init(multiboot_info_t* multiboot)
 {
     size_t total_memory_bytes = 0;
@@ -16,7 +39,7 @@ void memory_bitmap_module_init(multiboot_info_t* multiboot)
     }
 
     memory_bitmap.pages = total_memory_bytes / PAGE_SIZE;
-    memory_bitmap.entries = (uint32_t*)(ALIGN_TO_PAGE((uint32_t)&_kernel_end, PAGE_SIZE));
+    memory_bitmap.entries = (uint32_t*)(ALIGN_UP((uint32_t)&_kernel_end));
 
     for (int page_index = 0; page_index < memory_bitmap.pages; ++page_index)
     {
@@ -37,39 +60,38 @@ void memory_bitmap_module_init(multiboot_info_t* multiboot)
         }
     }
 
-    size_t page = 0;
-    size_t last_page = 0;
-    // lock first megabyte
-    last_page = 0x100000 / PAGE_SIZE;
-    for (size_t page = 0; page < last_page; ++page)
-    {
-        BITMAP_SET(memory_bitmap.entries, page);
-    }
-
-    // lock kernel
-    page = (uint32_t)&_kernel_start / PAGE_SIZE;
-    last_page = ((uint32_t)&_kernel_end + PAGE_SIZE - 1) / PAGE_SIZE;
-    for (; page < last_page; ++page)
-    {
-        BITMAP_SET(memory_bitmap.entries, page);
-    }
-
-    // lock memory bitmap
-    size_t bitmap_start_page = (uint32_t)memory_bitmap.entries / PAGE_SIZE;
-    for (page = 0; page < memory_bitmap.pages; ++page)
-    {
-        BITMAP_SET(memory_bitmap.entries, bitmap_start_page + page);
-    }
+    memory_bitmap_lock_first_megabyte(&memory_bitmap);
+    memory_bitmap_lock_kernel(&memory_bitmap);
+    memory_bitmap_lock_bitmap(&memory_bitmap);
+    
+    memory_bitmap.last_allocated_page_index = 0;
 }
 
 void* memory_bitmap_allocate()
 {
-    int page_index = 0;
+    int page_index = memory_bitmap.last_allocated_page_index;
+    uint32_t free_page_found = 0;
     for (; page_index < memory_bitmap.pages; ++page_index)
     {
-        if (!BITMAP_TEST(memory_bitmap.entries, page_index)) break;
+        if (!BITMAP_TEST(memory_bitmap.entries, page_index)) {
+            free_page_found = 1;
+            break;
+        }
     }
+    if (!free_page_found)
+    {
+        for (page_index = 0; page_index < memory_bitmap.last_allocated_page_index; ++page_index)
+        {
+            if (!BITMAP_TEST(memory_bitmap.entries, page_index)) {
+                free_page_found = 1;
+                break;
+            }
+        }
+    }
+    if (!free_page_found) return NULL;
+
     BITMAP_SET(memory_bitmap.entries, page_index);
+    memory_bitmap.last_allocated_page_index = page_index;
     return (void*)(page_index * PAGE_SIZE);
 }
 
@@ -77,4 +99,5 @@ void memory_bitmap_free(void* address)
 {
     uint32_t page_index = (uint32_t)address / PAGE_SIZE;
     if (BITMAP_TEST(memory_bitmap.entries, page_index)) BITMAP_CLEAR(memory_bitmap.entries, page_index); 
+    if (page_index < memory_bitmap.last_allocated_page_index) memory_bitmap.last_allocated_page_index = page_index; // next allocation will be a bit faster :)
 }

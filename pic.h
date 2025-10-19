@@ -23,7 +23,7 @@
 
 void pic_remap(int offset_master, int offset_slave);
 void pic_send_eoi(int irq);
-void pic_init_module();
+void pic_module_init();
 void pic_print_masks();
 
 #endif // ALURA_PIC_H
