@@ -12,12 +12,14 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     idt_module_init();
     __asm__ volatile("sti");
     printf("alura-os is loaded!\n");
+
+    return KERNEL_RESULT_OK;
 }
 
-void kernel_main(multiboot_info_t* multiboot, uint32_t magic)
+void kernel_main(multiboot_info_t* multiboot)
 {
-    kernel_initialize(multiboot);
-
+    // kernel_initialize(multiboot);
+    *((int*)0xc00b8000)=0x07690748;
     while (1) {  
         __asm__ volatile("hlt"); 
     }

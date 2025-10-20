@@ -22,6 +22,6 @@ typedef enum kernel_result_t {
 } kernel_result_t;
 
 kernel_result_t kernel_initialize(multiboot_info_t* multiboot);
-void kernel_main();
+void kernel_main(multiboot_info_t* multiboot);
 
 #endif // ALURA_KERNEL_H

@@ -31,7 +31,7 @@ memory_bitmap_t memory_bitmap;
 void memory_bitmap_module_init(multiboot_info_t* multiboot)
 {
     size_t total_memory_bytes = 0;
-    for (int i = 0; i < multiboot->mmap_length; i += sizeof(multiboot_memory_map_t)) 
+    for (uint32_t i = 0; i < multiboot->mmap_length; i += sizeof(multiboot_memory_map_t)) 
     {
         multiboot_memory_map_t* memory_map = (multiboot_memory_map_t*)(multiboot->mmap_addr + i); 
         size_t region_end = memory_map->len + memory_map->addr;
@@ -41,12 +41,12 @@ void memory_bitmap_module_init(multiboot_info_t* multiboot)
     memory_bitmap.pages = total_memory_bytes / PAGE_SIZE;
     memory_bitmap.entries = (uint32_t*)(ALIGN_UP((uint32_t)&_kernel_end));
 
-    for (int page_index = 0; page_index < memory_bitmap.pages; ++page_index)
+    for (uint32_t page_index = 0; page_index < memory_bitmap.pages; ++page_index)
     {
         BITMAP_SET(memory_bitmap.entries, page_index);
     }
 
-    for (int i = 0; i < multiboot->mmap_length; i += sizeof(multiboot_memory_map_t)) 
+    for (uint32_t i = 0; i < multiboot->mmap_length; i += sizeof(multiboot_memory_map_t)) 
     {
         multiboot_memory_map_t* memory_map = (multiboot_memory_map_t*)(multiboot->mmap_addr + i); 
         if (memory_map->type == MULTIBOOT_MEMORY_AVAILABLE)
@@ -69,7 +69,7 @@ void memory_bitmap_module_init(multiboot_info_t* multiboot)
 
 void* memory_bitmap_allocate()
 {
-    int page_index = memory_bitmap.last_allocated_page_index;
+    size_t page_index = memory_bitmap.last_allocated_page_index;
     uint32_t free_page_found = 0;
     for (; page_index < memory_bitmap.pages; ++page_index)
     {

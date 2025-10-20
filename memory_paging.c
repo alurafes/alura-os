@@ -4,7 +4,7 @@
 
 void memory_paging_reset_entry(page_entry_t* entry)
 {
-    for (int i = 0; i < PAGE_SIZE / sizeof(page_entry_t); ++i)
+    for (uint32_t i = 0; i < PAGE_SIZE / sizeof(page_entry_t); ++i)
     {
         entry[i] = 0;
     }

@@ -100,6 +100,7 @@ terminal_result_t terminal_render(terminal_t* terminal)
             terminal->driver->put_char(terminal->driver, character, x, y);
         }
     }
+    return TERMINAL_RESULT_OK;
 }
 
 terminal_result_t terminal_create(terminal_t* out, display_driver_t* driver)

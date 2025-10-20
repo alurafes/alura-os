@@ -37,7 +37,7 @@ kernel_heap_header_t* kernel_heap_allocate_more_headers(size_t headers_to_alloca
 
 void* kernel_heap_malloc(size_t size)
 {
-    if (size == NULL) return NULL;
+    if (size == 0) return NULL;
     size_t headers_to_allocate = (size + sizeof(kernel_heap_header_t) - 1) / sizeof(kernel_heap_header_t) + 1;
     
     kernel_heap_header_t* previous_header = kernel_heap.free_headers_head;

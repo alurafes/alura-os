@@ -38,6 +38,8 @@
         "memory.h": "c",
         "kernel_heap.h": "c",
         "memory_paging.h": "c",
-        "algorithm": "c"
+        "algorithm": "c",
+        "vadefs.h": "c",
+        "vga.h": "c"
     }
 }

@@ -8,7 +8,7 @@ QEMU    := qemu-system-i386
 
 # Build Flags
 
-CFLAGS  := -m32 -ffreestanding -c -g
+CFLAGS  := -m32 -ffreestanding -c -g -Wall -Wextra
 ASFLAGS := -f elf32
 LDFLAGS := -m elf_i386 -n -T linker.ld
 
@@ -19,7 +19,7 @@ ISODIR   := $(BUILDDIR)/iso/boot
 
 # Sources
 
-C_SOURCES := kernel.c vga.c gdt.c terminal.c print.c idt.c pic.c memory_bitmap.c memory_paging.c kernel_heap.c
+C_SOURCES := kernel.c vga.c gdt.c terminal.c print.c idt.c pic.c memory_bitmap.c memory_paging.c kernel_heap.c bootstrap.c
 ASM_SOURCES := boot.s isr_stubs.s isr_stub_handler.s
 
 # Objects
