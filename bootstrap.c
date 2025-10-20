@@ -30,11 +30,12 @@ static void identity_map_first_four_megabytes()
 __attribute__((section(".bootstrap.text")))
 static void map_higher_half_kernel()
 {
-    for (int i = 0; i < 1024; ++i)
+    for (int i = 0; i < 1023; ++i)
     {
         high_page_table[i] = ((i * 0x1000) + KERNEL_PHYSICAL) | PAGE_PRESENT | PAGE_READ_WRITE;
     }
     bootstrap_page_directory[KERNEL_VIRTUAL >> 22] = (uint32_t)high_page_table | PAGE_PRESENT | PAGE_READ_WRITE;
+    high_page_table[1023] = 0x000B8000 | PAGE_PRESENT | PAGE_READ_WRITE;
 }
 
 __attribute__((section(".bootstrap.text")))

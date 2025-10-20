@@ -25,8 +25,6 @@ SECTIONS {
 
     _bootstrap_phys_end = .;
 
-    . = ALIGN(4096);
-
     . = VIRTUAL_START + (_bootstrap_phys_end - PHYSICAL_START);
 
     .text ALIGN(4096) : AT(ADDR(.text) - VIRTUAL_START + PHYSICAL_START) {
