@@ -11,8 +11,8 @@ void memory_bitmap_lock_first_megabyte(memory_bitmap_t* bitmap)
 
 void memory_bitmap_lock_kernel(memory_bitmap_t* bitmap)
 {
-    size_t page = (uint32_t)&_kernel_start / PAGE_SIZE;
-    size_t last_page = ((uint32_t)&_kernel_end + PAGE_SIZE - 1) / PAGE_SIZE;
+    size_t page = (uint32_t)&_kernel_physical_start / PAGE_SIZE;
+    size_t last_page = ((uint32_t)&_kernel_physical_end + PAGE_SIZE - 1) / PAGE_SIZE;
     for (; page < last_page; ++page)
     {
         BITMAP_SET(bitmap->entries, page);
@@ -20,7 +20,7 @@ void memory_bitmap_lock_kernel(memory_bitmap_t* bitmap)
 }
 void memory_bitmap_lock_bitmap(memory_bitmap_t* bitmap)
 {
-    size_t bitmap_start_page = (uint32_t)bitmap->entries / PAGE_SIZE;
+    size_t bitmap_start_page = ALIGN_UP((uint32_t)&_kernel_physical_end) / PAGE_SIZE;
     for (size_t page = 0; page < bitmap->pages; ++page)
     {
         BITMAP_SET(bitmap->entries, bitmap_start_page + page);
@@ -39,7 +39,7 @@ void memory_bitmap_module_init(multiboot_info_t* multiboot)
     }
 
     memory_bitmap.pages = total_memory_bytes / PAGE_SIZE;
-    memory_bitmap.entries = (uint32_t*)(ALIGN_UP((uint32_t)&_kernel_end));
+    memory_bitmap.entries = (uint32_t*)(ALIGN_UP((uint32_t)&_kernel_physical_end + KERNEL_VIRTUAL_START));
 
     for (uint32_t page_index = 0; page_index < memory_bitmap.pages; ++page_index)
     {

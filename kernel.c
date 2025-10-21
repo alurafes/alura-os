@@ -2,7 +2,7 @@
 
 kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
 {
-    // memory_bitmap_module_init(multiboot);
+    memory_bitmap_module_init(multiboot);
     // memory_paging_module_init(&memory_bitmap);
     // kernel_heap_module_init(KERNEL_HEAP_VIRTUAL_START, KERNEL_HEAP_VIRTUAL_END);
     vga_module_init();
@@ -12,7 +12,7 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     idt_module_init();
 
     __asm__ volatile("sti");
-    
+
     printf("alura-os is loaded!\n");
 
     return KERNEL_RESULT_OK;

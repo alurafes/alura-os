@@ -14,7 +14,7 @@
 typedef uint32_t page_entry_t;
 
 extern page_entry_t* page_directory;
-void memory_paging_module_init(memory_bitmap_t* bitmap);
+void memory_paging_module_init();
 void memory_paging_map(uint32_t physical_address, uint32_t virtual_address, uint32_t flags);
 
 #endif // ALURA_MEMORY_PAGING_H

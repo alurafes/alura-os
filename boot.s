@@ -33,10 +33,8 @@ _start:
 
     mov esp, stack_top
 
-    push eax
     push ebx
-
-    jmp kernel_main
+    call kernel_main
 
     hlt
 

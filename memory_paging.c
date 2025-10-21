@@ -1,6 +1,6 @@
 #include "memory_paging.h"
 
-#include "print.h"
+#include "vga.h"
 
 void memory_paging_reset_entry(page_entry_t* entry)
 {
@@ -19,48 +19,43 @@ void memory_paging_enable()
     __asm__ volatile("mov %0, %%cr0" : : "r"(cr0));
 }
 
-void memory_paging_map_first_megabyte()
-{
-    for (uintptr_t address = 0; address < 0x100000; address += PAGE_SIZE)
-    {
-        memory_paging_map(address, address, PAGE_READ_WRITE);
-    }
-}
-
 void memory_paging_map_kernel()
 {
-    uintptr_t kernel_start = (uintptr_t)&_kernel_start;
-    uintptr_t kernel_end = (uintptr_t)&_kernel_end;
+    uintptr_t kernel_start = (uintptr_t)&_kernel_physical_start;
+    uintptr_t kernel_end = (uintptr_t)&_kernel_physical_end;
     uintptr_t address = ALIGN_DOWN(kernel_start);
     for (; address < kernel_end; address += PAGE_SIZE)
     {
-        memory_paging_map(address, address, PAGE_READ_WRITE);
+        memory_paging_map(address, KERNEL_VIRTUAL_START + address, PAGE_READ_WRITE);
     }
 }
 
-void memory_paging_map_memory_bitmap(memory_bitmap_t* bitmap)
+void memory_paging_map_memory_bitmap()
 {
-    uintptr_t bitmap_start = (uintptr_t)bitmap->entries;
-    size_t bitmap_size = (bitmap->pages + 7) / 8;
-    uintptr_t bitmap_end = ALIGN_UP(bitmap_start + bitmap_size);
-
-    uintptr_t address = ALIGN_DOWN(bitmap_start);
+    uintptr_t address = ALIGN_UP((uint32_t)&_kernel_physical_end);
+    uintptr_t bitmap_end = address + 32 * PAGE_SIZE;
     for (; address < bitmap_end; address += PAGE_SIZE)
     {
-        memory_paging_map(address, address, PAGE_READ_WRITE);
+        memory_paging_map(address, KERNEL_VIRTUAL_START + address, PAGE_READ_WRITE);
     }
+}
+
+// VGA so far. Framebuffer in the future
+void memory_paging_map_extras()
+{
+    memory_paging_map(0x00B0000, VGA_BUFFER, PAGE_READ_WRITE);
 }
 
 page_entry_t* page_directory = NULL;
-void memory_paging_module_init(memory_bitmap_t* bitmap)
+void memory_paging_module_init()
 {
     page_directory = memory_bitmap_allocate();
     if (page_directory == NULL) return; // Panic or somethin
     memory_paging_reset_entry(page_directory);
 
-    memory_paging_map_first_megabyte();
     memory_paging_map_kernel();
-    memory_paging_map_memory_bitmap(bitmap);
+    memory_paging_map_memory_bitmap();
+    memory_paging_map_extras();
     
     memory_paging_enable();
 }
