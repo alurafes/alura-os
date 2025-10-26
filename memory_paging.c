@@ -29,9 +29,9 @@ static inline void memory_paging_enable()
 
 void memory_paging_map_higher_half()
 {
-    for (uint32_t offset = 0; offset < 0x40000000; offset += PAGE_SIZE)
+    for (uint32_t offset = 0; offset < KERNEL_MAPPINGS_END - KERNEL_MAPPINGS_START; offset += PAGE_SIZE)
     {
-        memory_paging_map(offset, KERNEL_VIRTUAL_START + offset, PAGE_READ_WRITE);
+        memory_paging_map(offset, KERNEL_VIRTUAL_SPACE_START + offset, PAGE_READ_WRITE);
     }
 }
 

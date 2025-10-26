@@ -44,7 +44,7 @@ void memory_bitmap_module_init(multiboot_info_t* multiboot)
     }
 
     memory_bitmap.pages = total_memory_bytes / PAGE_SIZE;
-    memory_bitmap.entries = (uint32_t*)(ALIGN_UP((uint32_t)&_kernel_physical_end + KERNEL_VIRTUAL_START));
+    memory_bitmap.entries = (uint32_t*)(ALIGN_UP((uint32_t)&_kernel_physical_end + KERNEL_VIRTUAL_SPACE_START));
 
     for (uint32_t page_index = 0; page_index < memory_bitmap.pages; ++page_index)
     {

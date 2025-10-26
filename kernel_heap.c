@@ -113,12 +113,12 @@ void kernel_heap_free(void* address)
     kernel_heap.free_headers_head = freed_block_new_location;
 }
 
-void kernel_heap_module_init(uintptr_t heap_start, uintptr_t heap_end)
+void kernel_heap_module_init()
 {
     kernel_heap.base.next = &kernel_heap.base;
     kernel_heap.base.size = 0;
     kernel_heap.free_headers_head = &kernel_heap.base;
-    kernel_heap.heap_start = ALIGN_UP(heap_start);
-    kernel_heap.heap_end = ALIGN_DOWN(heap_end);
+    kernel_heap.heap_start = ALIGN_UP(KERNEL_HEAP_VIRTUAL_START);
+    kernel_heap.heap_end = ALIGN_DOWN(KERNEL_HEAP_VIRTUAL_END);
     kernel_heap.heap_break = kernel_heap.heap_start;
 }
