@@ -20,10 +20,15 @@ void memory_bitmap_lock_kernel(memory_bitmap_t* bitmap)
 }
 void memory_bitmap_lock_bitmap(memory_bitmap_t* bitmap)
 {
-    size_t bitmap_start_page = ALIGN_UP((uint32_t)&_kernel_physical_end) / PAGE_SIZE;
-    for (size_t page = 0; page < bitmap->pages; ++page)
+    uintptr_t bitmap_phys_start = ALIGN_UP((uintptr_t)&_kernel_physical_end);
+
+    size_t bitmap_size_bytes = ALIGN_UP(bitmap->pages / 8);
+    size_t bitmap_pages = bitmap_size_bytes / PAGE_SIZE;
+
+    size_t start_page = bitmap_phys_start / PAGE_SIZE;
+    for (size_t i = 0; i < bitmap_pages; ++i)
     {
-        BITMAP_SET(bitmap->entries, bitmap_start_page + page);
+        BITMAP_SET(bitmap->entries, start_page + i);
     }
 }
 

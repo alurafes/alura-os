@@ -4,7 +4,7 @@
 #include <stdint.h>
 #include "display_driver.h"
 
-#define VGA_BUFFER 0xC03FF000
+#define VGA_BUFFER 0xC00B8000
 #define VGA_WIDTH 80
 #define VGA_HEIGHT 25
 #define VGA_POINTER ((uint16_t*)VGA_BUFFER)

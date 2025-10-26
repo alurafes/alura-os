@@ -9,9 +9,9 @@
 #include "memory.h"
 
 #define BITMAP_ENTRY_SIZE_IN_BITS (sizeof(bitmap_entry_t) * 8)
-#define BITMAP_SET(bitmap, page_index) (bitmap[page_index / BITMAP_ENTRY_SIZE_IN_BITS] |=  1 << (page_index % BITMAP_ENTRY_SIZE_IN_BITS))
-#define BITMAP_CLEAR(bitmap, page_index) (bitmap[page_index / BITMAP_ENTRY_SIZE_IN_BITS] &= ~(1 << (page_index % BITMAP_ENTRY_SIZE_IN_BITS)))
-#define BITMAP_TEST(bitmap, page_index) (bitmap[page_index / BITMAP_ENTRY_SIZE_IN_BITS] & 1 << (page_index % BITMAP_ENTRY_SIZE_IN_BITS))
+#define BITMAP_SET(bitmap, page_index) (bitmap[(page_index) / BITMAP_ENTRY_SIZE_IN_BITS] |= (1 << ((page_index) % BITMAP_ENTRY_SIZE_IN_BITS)))
+#define BITMAP_CLEAR(bitmap, page_index) (bitmap[(page_index) / BITMAP_ENTRY_SIZE_IN_BITS] &= ~(1 << ((page_index) % BITMAP_ENTRY_SIZE_IN_BITS)))
+#define BITMAP_TEST(bitmap, page_index) (bitmap[(page_index) / BITMAP_ENTRY_SIZE_IN_BITS] & (1 << ((page_index) % BITMAP_ENTRY_SIZE_IN_BITS)))
 
 typedef uint32_t bitmap_entry_t;
 

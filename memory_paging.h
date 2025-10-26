@@ -10,6 +10,7 @@
 #define PAGE_PRESENT 0x1
 #define PAGE_READ_WRITE 0x2
 #define PAGE_USER 0x4
+#define PAGE_4MB 0x80
 
 typedef uint32_t page_entry_t;
 

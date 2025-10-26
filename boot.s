@@ -11,7 +11,7 @@ section .multiboot
 .bootstrap.stack
 align 16
 bootstrap_stack_bottom:
-    resb 4096
+    resb 1024
 bootstrap_stack_top:
 
 section .start
