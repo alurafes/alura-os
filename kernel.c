@@ -10,6 +10,7 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     gdt_module_init();
     pic_module_init();
     idt_module_init();
+    task_module_init();
 
     __asm__ volatile("sti");
 
@@ -18,9 +19,36 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     return KERNEL_RESULT_OK;
 }
 
+void task_b()
+{
+    printf("Task B\n");
+
+    while (1) {  
+        __asm__ volatile("hlt"); 
+    }
+}
+
+void task_a()
+{
+    printf("Task A\n");
+
+    task_t* task = task_create(task_b);
+    printf("stack %x\nfunc %x\n", task->esp, task_a);
+    task_switch(task);
+
+    while (1) {  
+        __asm__ volatile("hlt"); 
+    }
+}
+
 void kernel_main(multiboot_info_t* multiboot)
 {
     kernel_initialize(multiboot);
+
+    task_t* task = task_create(task_a);
+    printf("stack %x\nfunc %x\n", task->esp, task_a);
+    task_switch(task);
+
     while (1) {  
         __asm__ volatile("hlt"); 
     }

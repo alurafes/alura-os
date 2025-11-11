@@ -12,6 +12,7 @@
 #include "memory_bitmap.h"
 #include "memory_paging.h"
 #include "kernel_heap.h"
+#include "task.h"
 
 #include <stdint.h>
 #include <stddef.h>

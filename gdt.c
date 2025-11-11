@@ -5,9 +5,11 @@ gdt_result_t gdt_create(gdt_t* gdt)
     gdt->pointer.limit = sizeof(gdt->entries) - 1;
     gdt->pointer.base = (uint32_t)&gdt->entries;
 
-    gdt_set_entry(gdt, 0, 0, 0, 0, 0); // Null
-    gdt_set_entry(gdt, 1, 0, 0xFFFFFFFF, 0x9A, 0xCF); // Kernel Code 0b10011010 - Present: 1 | Kernel: 00 | S: 1 | Executable: 1 | Clear: 0, Read: 1, A: 0
-    gdt_set_entry(gdt, 2, 0, 0xFFFFFFFF, 0x92, 0xCF); // Kernel Data 0b10010010 - Present: 1 | Kernel: 00 | S: 1 | Executable: 0 | Grows Up: 0, Write: 1, A: 0
+    gdt_set_entry(gdt, GDT_NULL, 0, 0, 0, 0); // Null
+    gdt_set_entry(gdt, GDT_KERNEL_CODE, 0, 0xFFFFFFFF, GDT_FLAG_PRESENT | GDT_FLAG_RING0 | GDT_FLAG_SEGMENT | GDT_FLAG_EXECUTABLE | GDT_FLAG_READ_WRITE, GDT_GRANULARITY_4K | GDT_GRANULARITY_32BIT);
+    gdt_set_entry(gdt, GDT_KERNEL_DATA, 0, 0xFFFFFFFF, GDT_FLAG_PRESENT | GDT_FLAG_RING0 | GDT_FLAG_SEGMENT | GDT_FLAG_READ_WRITE, GDT_GRANULARITY_4K | GDT_GRANULARITY_32BIT); // Kernel Data 0b10010010 - Present: 1 | Kernel: 00 | S: 1 | Executable: 0 | Grows Up: 0, Write: 1, A: 0
+    gdt_set_entry(gdt, GDT_USER_CODE, 0, 0xFFFFFFFF, GDT_FLAG_PRESENT | GDT_FLAG_RING3 | GDT_FLAG_SEGMENT | GDT_FLAG_EXECUTABLE | GDT_FLAG_READ_WRITE, GDT_GRANULARITY_4K | GDT_GRANULARITY_32BIT);
+    gdt_set_entry(gdt, GDT_USER_DATA, 0, 0xFFFFFFFF, GDT_FLAG_PRESENT | GDT_FLAG_RING3 | GDT_FLAG_SEGMENT | GDT_FLAG_READ_WRITE, GDT_GRANULARITY_4K | GDT_GRANULARITY_32BIT); // Kernel Data 0b10010010 - Present: 1 | Kernel: 00 | S: 1 | Executable: 0 | Grows Up: 0, Write: 1, A: 0
 
     gdt_flush(&gdt->pointer);
     return GDT_RESULT_OK;
