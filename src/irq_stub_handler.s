@@ -1,7 +1,7 @@
 global irq_stub_handler
 extern irq_handler
 irq_stub_handler:
-    pusha
+    pushad
     push ds
     push es
     push fs
@@ -21,6 +21,6 @@ irq_stub_handler:
     pop fs
     pop es
     pop ds
-    popa
+    popad
     add esp, 8
     iret

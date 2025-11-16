@@ -1,17 +1,15 @@
 global task_manager_task_switch
 
-extern task_manager
-
 task_manager_task_switch:
     push ebx
     push esi
     push edi
     push ebp
 
-    mov edi, [task_manager] ; task_manager.current_task
+    mov edi, [esp + 4 * (4 + 1)] ; task_manager->current_task
     mov [edi + 4], esp
-    mov esi, [esp + 20] ; getting to the passed parameter from C
-    mov [task_manager], esi
+    mov esi, [esp + 4 * (4 + 2)] ; new task_t
+    mov [edi], esi
 
     mov esp, [esi + 4]
     mov eax, [esi + 8]
@@ -26,5 +24,4 @@ task_manager_task_switch:
     pop edi
     pop esi
     pop ebx
-
     ret

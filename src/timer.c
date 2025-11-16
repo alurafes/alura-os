@@ -1,5 +1,7 @@
 #include "timer.h"
 
+#include "print.h"
+
 uint64_t timer_ticks = 0;
 
 void timer_set_phase()
@@ -13,6 +15,9 @@ void timer_set_phase()
 void timer_irq_handler(register_interrupt_data_t* data)
 {
     timer_ticks++;
+    printf("TEST\n");
+    pic_send_eoi(data->interrupt_index - IDT_BASE_ENTRIES_COUNT);
+    task_manager_schedule(&task_manager);
 }
 
 void timer_module_init()

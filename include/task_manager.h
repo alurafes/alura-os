@@ -6,6 +6,7 @@
 
 #include "kernel_heap.h"
 #include "memory_paging.h"
+#include "idt.h"
 
 typedef struct task_t {
     uint32_t id;
@@ -22,7 +23,8 @@ typedef struct task_manager_t {
 extern task_manager_t task_manager;
 void task_manager_module_init();
 
-task_t* task_manager_task_create(void (*entry)(void));
-extern void task_manager_task_switch(task_t* task);
+task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(void));
+extern void task_manager_task_switch(task_manager_t* task_manager, task_t* task);
+void task_manager_schedule(task_manager_t* task_manager);
 
 #endif // ALURA_TASK_H

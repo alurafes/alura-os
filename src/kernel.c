@@ -1,5 +1,19 @@
 #include "kernel.h"
 
+void task_a()
+{
+    while (1) {
+        printf("Task A: %x\n", task_manager.task_current);
+    }
+}
+
+void task_b()
+{
+    while (1) {  
+        printf("Task B: %x\n", task_manager.task_current);
+    }
+}
+
 kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
 {
     memory_bitmap_module_init(multiboot);
@@ -14,41 +28,18 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     timer_module_init();
     task_manager_module_init();
 
-    __asm__ volatile("sti");
+    task_manager_task_create(&task_manager, task_a);
+    task_manager_task_create(&task_manager, task_b);
 
     printf("alura-os is loaded!\n");
+    __asm__ volatile("sti");
 
     return KERNEL_RESULT_OK;
-}
-
-void task_b()
-{
-    printf("Task B\n");
-    while (1) {  
-        __asm__ volatile("hlt"); 
-    }
-}
-
-void task_a()
-{
-    printf("Task A\n");
-
-    task_t* task = task_manager_task_create(task_b);
-    printf("stack %x\nfunc %x\n", task->esp, task_a);
-    task_manager_task_switch(task);
-
-    while (1) {  
-        __asm__ volatile("hlt"); 
-    }
 }
 
 void kernel_main(multiboot_info_t* multiboot)
 {
     kernel_initialize(multiboot);
-
-    task_t* task = task_manager_task_create(task_a);
-    printf("stack %x\nfunc %x\n", task->esp, task_a);
-    task_manager_task_switch(task);
 
     while (1) {  
         __asm__ volatile("hlt"); 
