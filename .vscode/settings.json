@@ -41,6 +41,7 @@
         "algorithm": "c",
         "vadefs.h": "c",
         "vga.h": "c",
-        "timer.h": "c"
+        "timer.h": "c",
+        "task_manager.h": "c"
     }
 }

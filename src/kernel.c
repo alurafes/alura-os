@@ -12,7 +12,7 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     idt_module_init();
     irq_module_init();
     timer_module_init();
-    task_module_init();
+    task_manager_module_init();
 
     __asm__ volatile("sti");
 
@@ -33,9 +33,9 @@ void task_a()
 {
     printf("Task A\n");
 
-    task_t* task = task_create(task_b);
+    task_t* task = task_manager_task_create(task_b);
     printf("stack %x\nfunc %x\n", task->esp, task_a);
-    task_switch(task);
+    task_manager_task_switch(task);
 
     while (1) {  
         __asm__ volatile("hlt"); 
@@ -46,9 +46,9 @@ void kernel_main(multiboot_info_t* multiboot)
 {
     kernel_initialize(multiboot);
 
-    task_t* task = task_create(task_a);
+    task_t* task = task_manager_task_create(task_a);
     printf("stack %x\nfunc %x\n", task->esp, task_a);
-    task_switch(task);
+    task_manager_task_switch(task);
 
     while (1) {  
         __asm__ volatile("hlt"); 

@@ -14,11 +14,15 @@ typedef struct task_t {
     struct task_t* next_task;
 } task_t;
 
-extern task_t* task_current;
-extern task_t* task_queue;
+typedef struct task_manager_t {
+    task_t* task_current;
+    task_t* task_queue;
+} task_manager_t;
 
-void task_module_init();
-task_t* task_create(void (*entry)(void));
-extern void task_switch(task_t* task);
+extern task_manager_t task_manager;
+void task_manager_module_init();
+
+task_t* task_manager_task_create(void (*entry)(void));
+extern void task_manager_task_switch(task_t* task);
 
 #endif // ALURA_TASK_H
