@@ -40,6 +40,7 @@
         "memory_paging.h": "c",
         "algorithm": "c",
         "vadefs.h": "c",
-        "vga.h": "c"
+        "vga.h": "c",
+        "timer.h": "c"
     }
 }

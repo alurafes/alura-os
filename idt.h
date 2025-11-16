@@ -5,7 +5,8 @@
 
 #include "pic.h"
 
-#define IDT_ENTRIES_COUNT 256
+#define IDT_MAX_ENTRIES_COUNT 256
+#define IDT_BASE_ENTRIES_COUNT 32
 
 typedef enum idt_result_t {
     IDT_RESULT_OK,
@@ -26,7 +27,7 @@ typedef struct idt_pointer_t {
 } __attribute__((packed)) idt_pointer_t;
 
 typedef struct idt_t {
-    idt_entry_t entries[IDT_ENTRIES_COUNT];
+    idt_entry_t entries[IDT_MAX_ENTRIES_COUNT];
     idt_pointer_t pointer;
 } idt_t;
 
@@ -39,13 +40,13 @@ void idt_module_init();
 
 extern void* isr_stubs[];
 
-typedef struct isr_interrupt_data {
+typedef struct register_interrupt_data_t {
     uint32_t gs, fs, es, ds;
     uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
     uint32_t interrupt_index, error_code;
     uint32_t eip, cs, eflags, useresp, ss;
-} __attribute__((packed)) isr_interrupt_data;
+} __attribute__((packed)) register_interrupt_data_t;
 
-void isr_handler(isr_interrupt_data* data);
+void isr_handler(register_interrupt_data_t* data);
 
 #endif // ALURA_IDT_H

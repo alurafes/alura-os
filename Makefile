@@ -19,8 +19,8 @@ ISODIR   := $(BUILDDIR)/iso/boot
 
 # Sources
 
-C_SOURCES := kernel.c vga.c gdt.c terminal.c print.c idt.c pic.c memory_bitmap.c memory_paging.c kernel_heap.c bootstrap.c task.c
-ASM_SOURCES := boot.s isr_stubs.s isr_stub_handler.s task_switch.s
+C_SOURCES := kernel.c vga.c gdt.c terminal.c print.c idt.c irq.c pic.c memory_bitmap.c memory_paging.c kernel_heap.c bootstrap.c task.c timer.c
+ASM_SOURCES := boot.s isr_stubs.s isr_stub_handler.s irq_stubs.s irq_stub_handler.s task_switch.s
 
 # Objects
 

@@ -26,18 +26,10 @@ isr%1:
 %assign i i+1
 %endrep
 
-%assign i 32
-%rep 224
-
-    ISR_STUB i
-
-%assign i i+1
-%endrep
-
 ; setup the isr_stubs variable to use in C
 isr_stubs:
 %assign i 0
-%rep 256
+%rep 32
     dd isr%+i
 
 %assign i i+1

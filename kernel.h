@@ -5,6 +5,7 @@
 
 #include "gdt.h"
 #include "idt.h"
+#include "irq.h"
 #include "terminal.h"
 #include "vga.h"
 #include "print.h"
@@ -13,6 +14,7 @@
 #include "memory_paging.h"
 #include "kernel_heap.h"
 #include "task.h"
+#include "timer.h"
 
 #include <stdint.h>
 #include <stddef.h>

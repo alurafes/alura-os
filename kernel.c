@@ -10,6 +10,8 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     gdt_module_init();
     pic_module_init();
     idt_module_init();
+    irq_module_init();
+    timer_module_init();
     task_module_init();
 
     __asm__ volatile("sti");
@@ -22,7 +24,6 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
 void task_b()
 {
     printf("Task B\n");
-
     while (1) {  
         __asm__ volatile("hlt"); 
     }

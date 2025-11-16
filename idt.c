@@ -8,7 +8,7 @@ idt_result_t idt_create(idt_t* idt)
     idt->pointer.limit = sizeof(idt->entries) - 1;
     idt->pointer.base = (uint32_t)&idt->entries;
 
-    for (int i = 0; i < IDT_ENTRIES_COUNT; ++i)
+    for (int i = 0; i < IDT_BASE_ENTRIES_COUNT; ++i)
     {
         idt_set_entry(idt, i, (uint32_t)isr_stubs[i], 0x08, 0x8E); // 0b10001111 - 1 - present | 00 - kernel | 0 - zero | 1110 - interrupt gate
     }
@@ -19,7 +19,7 @@ idt_result_t idt_create(idt_t* idt)
 
 idt_result_t idt_set_entry(idt_t* idt, int index, uint32_t offset, uint16_t segment_selector, uint8_t type_attributes)
 {
-    if (index >= IDT_ENTRIES_COUNT) return IDT_RESULT_OUT_OF_BOUNDS;
+    if (index >= IDT_MAX_ENTRIES_COUNT) return IDT_RESULT_OUT_OF_BOUNDS;
 
     idt->entries[index].offset_low = offset & 0xFFFF;
     idt->entries[index].offset_high = (offset >> 16) & 0xFFFF;
@@ -35,7 +35,7 @@ void idt_flush(idt_pointer_t* pointer)
     __asm__ volatile ("lidt (%0)" : : "r"(pointer));
 }
 
-void isr_handler(isr_interrupt_data* data)
+void isr_handler(register_interrupt_data_t* data)
 {
     // exception
     if (data->interrupt_index < PIC1_REMAPPED_VECTOR)
@@ -43,26 +43,6 @@ void isr_handler(isr_interrupt_data* data)
         vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_RED, .foreground = VGA_COLOR_BLACK});
         printf("\n\nException #%x: Error Code: %x\nRegisters:\ngs = %x, fs = %x, es = %x, ds = %x\nedi = %x, esi = %x, ebp = %x, esp = %x, ebx = %x, edx = %x, ecx = %x, eax = %x\neip = %x, cs = %x, eflags = %x, useresp = %x, ss = %x", data->interrupt_index, data->error_code, data->gs, data->fs, data->es, data->ds, data->edi, data->esi, data->ebp, data->esp, data->ebx, data->edx, data->ecx, data->eax, data->eip, data->cs, data->eflags, data->useresp, data->ss);
         for(;;) asm("hlt");
-    }
-    // irq
-    if (data->interrupt_index >= PIC1_REMAPPED_VECTOR || data->interrupt_index < PIC2_REMAPPED_VECTOR + 8)
-    {
-        int irq = data->interrupt_index - PIC1_REMAPPED_VECTOR;
-        
-        switch (irq)
-        {
-            case 1: {
-                uint8_t scancode = io_inb(0x60);
-                printf("Scancode: %x\n", scancode);
-                break;
-            }
-        }
-
-        pic_send_eoi(irq);
-    }
-    else
-    {
-        // software interrupt
     }
 }
 
