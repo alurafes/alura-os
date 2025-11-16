@@ -19,23 +19,23 @@ ISODIR   := $(BUILDDIR)/iso/boot
 
 # Sources
 
-C_SOURCES := kernel.c vga.c gdt.c terminal.c print.c idt.c irq.c pic.c memory_bitmap.c memory_paging.c kernel_heap.c bootstrap.c task.c timer.c
-ASM_SOURCES := boot.s isr_stubs.s isr_stub_handler.s irq_stubs.s irq_stub_handler.s task_switch.s
+C_SOURCES := $(wildcard src/*.c)
+ASM_SOURCES := $(wildcard src/*.s)
 
 # Objects
 
-C_OBJS   := $(C_SOURCES:%.c=$(BUILDDIR)/%.o)
-ASM_OBJS := $(ASM_SOURCES:%.s=$(BUILDDIR)/%.o)
+C_OBJS   := $(C_SOURCES:src/%.c=$(BUILDDIR)/%.o)
+ASM_OBJS := $(ASM_SOURCES:src/%.s=$(BUILDDIR)/%.o)
 OBJS     := $(C_OBJS) $(ASM_OBJS)
 
 # Targets
 
 all: iso
 
-$(BUILDDIR)/%.o: %.c
-	$(CC) $(CFLAGS) $< -o $@
+$(BUILDDIR)/%.o: src/%.c
+	$(CC) -Iinclude $(CFLAGS) $< -o $@
 
-$(BUILDDIR)/%.o: %.s
+$(BUILDDIR)/%.o: src/%.s
 	$(AS) $(ASFLAGS) $< -o $@
 
 link: $(OBJS)
