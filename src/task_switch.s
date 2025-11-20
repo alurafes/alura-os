@@ -1,18 +1,18 @@
 global task_manager_task_switch
 
-task_manager_task_switch:
-    push ebx
-    push esi
-    push edi
-    push ebp
+extern task_manager
 
-    mov edi, [esp + 20]     ; old
-    mov esi, [esp + 24]     ; new
+task_manager_task_switch:
+    mov edi, [task_manager]
+    mov esi, [edi + 12]
 
     mov eax, [esi + 4]      ; save new task's stack 
     mov [edi + 4], esp      ; save current stack to old task's esp variable
 
+    mov [task_manager], esi
+
     mov esp, eax
+
     mov eax, [esi + 8]
     mov ebx, cr3
     cmp eax, ebx
@@ -20,8 +20,10 @@ task_manager_task_switch:
     mov cr3, eax
 
 .task_switch_finish:
-    pop ebp
-    pop edi
-    pop esi
-    pop ebx
-    ret
+    pop gs
+    pop fs
+    pop es
+    pop ds
+    popad
+    add esp, 8
+    iret

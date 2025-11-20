@@ -6,7 +6,7 @@
 #include "task_manager.h"
 
  
-#define TIMER_PHASE 100
+#define TIMER_PHASE 1000
 
 #define PIT_CLOCK 1193180
 

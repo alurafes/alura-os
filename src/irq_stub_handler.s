@@ -1,5 +1,7 @@
 global irq_stub_handler
 extern irq_handler
+extern task_manager
+extern task_manager_task_switch
 irq_stub_handler:
     pushad
     push ds
@@ -17,6 +19,13 @@ irq_stub_handler:
     call irq_handler
     add esp, 4
 
+    cmp dword [task_manager + 8], 0
+    je .irq_stub_handler_normal
+
+    mov dword [task_manager + 8], 0
+    jmp task_manager_task_switch
+    
+.irq_stub_handler_normal
     pop gs
     pop fs
     pop es

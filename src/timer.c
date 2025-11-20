@@ -15,8 +15,7 @@ void timer_set_phase()
 void timer_irq_handler(register_interrupt_data_t* data)
 {
     timer_ticks++;
-    // pic_send_eoi(0);
-    // task_manager_schedule(&task_manager);
+    task_manager.task_needs_switching = 1;
 }
 
 void timer_module_init()

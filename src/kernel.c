@@ -1,16 +1,11 @@
 #include "kernel.h"
 
-void task_a()
+void simple_task()
 {
+    int a = 0;
     while (1) {
-        printf("Task A: %x\n", task_manager.task_current);
-    }
-}
-
-void task_b()
-{
-    while (1) {  
-        printf("Task B: %x\n", task_manager.task_current);
+        a++;
+        printf("Task %d: %d\n", task_manager.task_current->id, a);
     }
 }
 
@@ -28,8 +23,10 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     timer_module_init();
     task_manager_module_init();
 
-    task_manager_task_create(&task_manager, task_a);
-    task_manager_task_create(&task_manager, task_b);
+    task_manager_task_create(&task_manager, simple_task);
+    task_manager_task_create(&task_manager, simple_task);
+    task_manager_task_create(&task_manager, simple_task);
+    task_manager_task_create(&task_manager, simple_task);
 
     printf("alura-os is loaded!\n");
 
