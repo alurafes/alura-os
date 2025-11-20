@@ -32,15 +32,14 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     task_manager_task_create(&task_manager, task_b);
 
     printf("alura-os is loaded!\n");
-    __asm__ volatile("sti");
 
+    __asm__ volatile("sti");
     return KERNEL_RESULT_OK;
 }
 
 void kernel_main(multiboot_info_t* multiboot)
 {
     kernel_initialize(multiboot);
-
     while (1) {  
         __asm__ volatile("hlt"); 
     }

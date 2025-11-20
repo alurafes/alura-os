@@ -37,21 +37,26 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
     return task;
 }
 
-void task_manager_task_idle_entry()
+task_t* task_manager_create_idle_task(task_manager_t* task_manager)
 {
-    while (1) {  
-        printf("IDLE\n");
-    }
+    task_t* task = (task_t*)kernel_heap_calloc(sizeof(task_t));
+    task->id = task_id++;
+    __asm__ volatile("mov %%esp, %0" : "=r"(task->esp)); 
+    __asm__ volatile("mov %%cr3, %0" : "=r"(task->cr3));
+    task_manager_queue_task(task_manager, task);
+    return task;
 }
 
 void task_manager_module_init()
 {
     task_manager.task_queue = NULL;
-    task_manager.task_current = task_manager_task_create(&task_manager, task_manager_task_idle_entry);
+    task_manager.task_current = task_manager_create_idle_task(&task_manager);
 }
 
 void task_manager_schedule(task_manager_t* task_manager)
 {
-    if (task_manager->task_current == NULL) return;
-    task_manager_task_switch(task_manager, task_manager->task_current->next_task);
+    task_t* old = task_manager->task_current;
+    task_t* new = task_manager->task_current->next_task;
+    task_manager->task_current = new;
+    task_manager_task_switch(old, new);
 }
