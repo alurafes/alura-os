@@ -9,5 +9,6 @@ Things done so far:
 * Physical memory manager (memory bitmap)
 * Virtual memory (Higher half mapping)
 * Kernel heap (basic K&R style allocator)
-* GDT (just ring 0 entries for now)
+* GDT (Both kernel and user, TSS)
 * IDT, IRQ, Exceptions, PIC remapping
+* Task switching and scheduling (MLFQ)

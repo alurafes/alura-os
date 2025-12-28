@@ -3,6 +3,7 @@
 
 #include "multiboot.h"
 
+#include "tss.h"
 #include "gdt.h"
 #include "idt.h"
 #include "irq.h"

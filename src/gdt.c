@@ -10,6 +10,7 @@ gdt_result_t gdt_create(gdt_t* gdt)
     gdt_set_entry(gdt, GDT_KERNEL_DATA, 0, 0xFFFFFFFF, GDT_FLAG_PRESENT | GDT_FLAG_RING0 | GDT_FLAG_SEGMENT | GDT_FLAG_READ_WRITE, GDT_GRANULARITY_4K | GDT_GRANULARITY_32BIT); // Kernel Data 0b10010010 - Present: 1 | Kernel: 00 | S: 1 | Executable: 0 | Grows Up: 0, Write: 1, A: 0
     gdt_set_entry(gdt, GDT_USER_CODE, 0, 0xFFFFFFFF, GDT_FLAG_PRESENT | GDT_FLAG_RING3 | GDT_FLAG_SEGMENT | GDT_FLAG_EXECUTABLE | GDT_FLAG_READ_WRITE, GDT_GRANULARITY_4K | GDT_GRANULARITY_32BIT);
     gdt_set_entry(gdt, GDT_USER_DATA, 0, 0xFFFFFFFF, GDT_FLAG_PRESENT | GDT_FLAG_RING3 | GDT_FLAG_SEGMENT | GDT_FLAG_READ_WRITE, GDT_GRANULARITY_4K | GDT_GRANULARITY_32BIT); // Kernel Data 0b10010010 - Present: 1 | Kernel: 00 | S: 1 | Executable: 0 | Grows Up: 0, Write: 1, A: 0
+    gdt_set_entry(gdt, GDT_TSS, (uint32_t)&tss, sizeof(tss) - 1, GDT_FLAG_PRESENT | GDT_FLAG_RING0 | GDT_FLAG_SYSTEM | GDT_FLAG_TSS, GDT_GRANULARITY_BYTE);
 
     gdt_flush(&gdt->pointer);
     return GDT_RESULT_OK;

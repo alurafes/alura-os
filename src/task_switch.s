@@ -1,19 +1,24 @@
+%include "task_manager.inc"
+%include "tss.inc"
 global task_manager_task_switch
 
 extern task_manager
+extern tss
 
 task_manager_task_switch:
-    mov edi, [task_manager]
-    mov esi, [edi + 12]
+    mov edi, [task_manager + task_manager_t.task_current]
+    mov esi, [task_manager + task_manager_t.task_next]
 
-    mov eax, [esi + 4]      ; save new task's stack 
-    mov [edi + 4], esp      ; save current stack to old task's esp variable
+    mov [edi + task_t.task_esp], esp      ; save current stack to old task's esp variable
+    
+    mov eax, [esi + task_t.kernel_stack_top]      ; save new task's stack 
+    mov [tss + tss_entry_t.esp0], eax
 
-    mov [task_manager], esi
+    mov [task_manager + task_manager_t.task_current], esi
 
-    mov esp, eax
+    mov esp, [esi + task_t.task_esp]
 
-    mov eax, [esi + 8]
+    mov eax, [esi + task_t.task_cr3]
     mov ebx, cr3
     cmp eax, ebx
     je .task_switch_finish

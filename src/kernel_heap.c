@@ -13,7 +13,8 @@ void* kernel_heap_allocate_physical_memory(size_t bytes)
     {
         void* physical_allocated = memory_bitmap_allocate();
         if (!physical_allocated) return NULL;
-        memory_paging_map((uint32_t)physical_allocated, (uint32_t)address, PAGE_READ_WRITE);
+        // TODO: DEAL WITH PAGE_USER
+        memory_paging_map((uint32_t)physical_allocated, (uint32_t)address, PAGE_READ_WRITE | PAGE_USER);
         address += PAGE_SIZE;
     }
     void* allocated_address = (void*)kernel_heap.heap_break;

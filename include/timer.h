@@ -24,5 +24,6 @@
 
 void timer_set_phase();
 void timer_module_init();
+uint64_t timer_get_ticks();
 
 #endif // ALURA_TIMER_H

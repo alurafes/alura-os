@@ -41,7 +41,26 @@ void isr_handler(register_interrupt_data_t* data)
     if (data->interrupt_index < PIC1_REMAPPED_VECTOR)
     {
         vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_RED, .foreground = VGA_COLOR_BLACK});
-        printf("\n\nException #%x: Error Code: %x\nRegisters:\ngs = %x, fs = %x, es = %x, ds = %x\nedi = %x, esi = %x, ebp = %x, esp = %x, ebx = %x, edx = %x, ecx = %x, eax = %x\neip = %x, cs = %x, eflags = %x, useresp = %x, ss = %x", data->interrupt_index, data->error_code, data->gs, data->fs, data->es, data->ds, data->edi, data->esi, data->ebp, data->esp, data->ebx, data->edx, data->ecx, data->eax, data->eip, data->cs, data->eflags, data->useresp, data->ss);
+        printf("\n\nException #%x: Error Code: %x\nRegisters:\ngs = %x, fs = %x, es = %x, ds = %x\nedi = %x, esi = %x, ebp = %x, esp = %x, ebx = %x, edx = %x, ecx = %x, eax = %x\neip = %x, cs = %x, eflags = %x, useresp = %x, ss = %x", 
+            data->interrupt_index, 
+            data->error_code, 
+            data->gs, 
+            data->fs, 
+            data->es, 
+            data->ds, 
+            data->edi, 
+            data->esi, 
+            data->ebp, 
+            data->esp, 
+            data->ebx,
+            data->edx, 
+            data->ecx, 
+            data->eax, 
+            data->eip, 
+            data->cs, 
+            data->eflags, 
+            data->useresp, 
+            data->ss);
         for(;;) asm("hlt");
     }
 }

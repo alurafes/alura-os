@@ -3,17 +3,22 @@
 
 #include <stdint.h>
 
-#define GDT_ENTRIES_COUNT 5 // None, Kernel Code, Kernel Data, User Code, User Data. # todo: add TSS
+#include "tss.h"
+
+#define GDT_ENTRIES_COUNT 6 // None, Kernel Code, Kernel Data, User Code, User Data, TSS
 
 #define GDT_FLAG_PRESENT 0x80
 #define GDT_FLAG_RING0 0x00
 #define GDT_FLAG_RING3 0x60
 #define GDT_FLAG_SEGMENT 0x10
+#define GDT_FLAG_SYSTEM 0x00
 #define GDT_FLAG_EXECUTABLE 0x08
 #define GDT_FLAG_READ_WRITE 0x02
+#define GDT_FLAG_TSS 0x09
 
-#define GDT_GRANULARITY_4K          0x80
-#define GDT_GRANULARITY_32BIT       0x40
+#define GDT_GRANULARITY_BYTE 0x00
+#define GDT_GRANULARITY_4K 0x80
+#define GDT_GRANULARITY_32BIT 0x40
 
 typedef enum gdt_result_t {
     GDT_RESULT_OK,

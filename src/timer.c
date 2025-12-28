@@ -15,11 +15,16 @@ void timer_set_phase()
 void timer_irq_handler(register_interrupt_data_t* data)
 {
     timer_ticks++;
-    task_manager.task_needs_switching = 1;
+    task_manager_schedule(&task_manager);
 }
 
 void timer_module_init()
 {
     timer_set_phase();
     irq_register_handler(&irq, 0, timer_irq_handler);
+}
+
+uint64_t timer_get_ticks()
+{
+    return timer_ticks;
 }

@@ -36,7 +36,7 @@ $(BUILDDIR)/%.o: src/%.c
 	$(CC) -Iinclude $(CFLAGS) $< -o $@
 
 $(BUILDDIR)/%.o: src/%.s
-	$(AS) $(ASFLAGS) $< -o $@
+	$(AS) -Iinclude $(ASFLAGS) $< -o $@
 
 link: $(OBJS)
 	$(LD) $(LDFLAGS) -o $(ISODIR)/kernel.elf $(OBJS)

@@ -1,7 +1,14 @@
 global isr_stub_handler
 extern isr_handler
 isr_stub_handler:
-    pusha
+    push eax
+    push ecx
+    push edx
+    push ebx
+    push esp
+    push ebp
+    push esi
+    push edi
     push ds
     push es
     push fs
@@ -21,6 +28,13 @@ isr_stub_handler:
     pop fs
     pop es
     pop ds
-    popa
+    pop edi
+    pop esi
+    pop ebp
+    pop esp
+    pop ebx
+    pop edx
+    pop ecx
+    pop eax 
     add esp, 8 ; get rid of error code and isr index
     iret
