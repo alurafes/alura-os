@@ -31,8 +31,7 @@ void memory_paging_map_higher_half()
 {
     for (uint32_t offset = 0; offset < KERNEL_MAPPINGS_END - KERNEL_MAPPINGS_START; offset += PAGE_SIZE)
     {
-        // TODO: DEAL WITH PAGE_USER
-        memory_paging_map(offset, KERNEL_VIRTUAL_SPACE_START + offset, PAGE_READ_WRITE | PAGE_USER);
+        memory_paging_map(offset, KERNEL_VIRTUAL_SPACE_START + offset, PAGE_READ_WRITE);
     }
 }
 
@@ -63,9 +62,7 @@ void memory_paging_map(uintptr_t physical_address, uintptr_t virtual_address, ui
 
         page_entry_t* new_page_table_entry_virtual = (page_entry_t*)physical_to_virtual(new_page_table_entry);
         memory_paging_reset_entry(new_page_table_entry_virtual);
-
-        // TODO: DEAL WITH PAGE_USER
-        page_directory[page_directory_index] = ((uint32_t)new_page_table_entry) | PAGE_PRESENT | PAGE_READ_WRITE | PAGE_USER;
+        page_directory[page_directory_index] = ((uint32_t)new_page_table_entry) | PAGE_PRESENT | PAGE_READ_WRITE;
     }
     page_entry_t* page_table = (page_entry_t*)(page_directory[page_directory_index] & 0xFFFFF000);
     page_entry_t* page_table_virtual = (page_entry_t*)physical_to_virtual(page_table);

@@ -7,6 +7,7 @@
 
 #define IDT_MAX_ENTRIES_COUNT 256
 #define IDT_BASE_ENTRIES_COUNT 32
+#define IDT_SYSCALL 0x80
 
 typedef enum idt_result_t {
     IDT_RESULT_OK,
@@ -39,6 +40,7 @@ extern idt_t idt;
 void idt_module_init();
 
 extern void* isr_stubs[];
+extern void* isr_syscall;
 
 typedef struct register_interrupt_data_t {
     uint32_t gs, fs, es, ds;

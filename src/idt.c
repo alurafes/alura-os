@@ -13,6 +13,8 @@ idt_result_t idt_create(idt_t* idt)
         idt_set_entry(idt, i, (uint32_t)isr_stubs[i], 0x08, 0x8E); // 0b10001111 - 1 - present | 00 - kernel | 0 - zero | 1110 - interrupt gate
     }
 
+    idt_set_entry(idt, IDT_SYSCALL, (uint32_t)isr_syscall, 0x08, 0xEF);
+
     idt_flush(&idt->pointer);
     return IDT_RESULT_OK;
 }
@@ -62,6 +64,10 @@ void isr_handler(register_interrupt_data_t* data)
             data->useresp, 
             data->ss);
         for(;;) asm("hlt");
+    }
+    if (data->interrupt_index == IDT_SYSCALL)
+    {
+        printf("syscall\n");
     }
 }
 

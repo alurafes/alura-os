@@ -16,6 +16,7 @@
 #include "kernel_heap.h"
 #include "task_manager.h"
 #include "timer.h"
+#include "vfs.h"
 
 #include <stdint.h>
 #include <stddef.h>

@@ -19,8 +19,8 @@ ISODIR   := $(BUILDDIR)/iso/boot
 
 # Sources
 
-C_SOURCES := $(wildcard src/*.c)
-ASM_SOURCES := $(wildcard src/*.s)
+C_SOURCES := $(shell find src -type f -name '*.c')
+ASM_SOURCES := $(shell find src -type f -name '*.s')
 
 # Objects
 
@@ -33,9 +33,11 @@ OBJS     := $(C_OBJS) $(ASM_OBJS)
 all: iso
 
 $(BUILDDIR)/%.o: src/%.c
+	@mkdir -p $(dir $@)
 	$(CC) -Iinclude $(CFLAGS) $< -o $@
 
 $(BUILDDIR)/%.o: src/%.s
+	@mkdir -p $(dir $@)
 	$(AS) -Iinclude $(ASFLAGS) $< -o $@
 
 link: $(OBJS)
