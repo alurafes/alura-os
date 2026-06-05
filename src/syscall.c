@@ -9,9 +9,9 @@ int32_t syscall_open(task_t* task, const char* path)
     vfs_node_t* node = NULL;
     resource_result_t result = vfs_resolve(&vfs, path, &node);
     if (result != RESOURCE_RESULT_OK) return -(int32_t)result;
-
+    
     if (node->type != VFS_NODE_TYPE_FILE) return -(int32_t)RESOURCE_RESULT_INVALID;
-
+    
     size_t index = 0;
     result = resource_register(task, RESOURCE_TYPE_FILE, node, &vfs_operations, &index);
     if (result != RESOURCE_RESULT_OK) return -(int32_t)result;

@@ -64,6 +64,7 @@ extern vfs_t vfs;
 void vfs_module_init();
 
 resource_result_t vfs_create_node(vfs_t* vfs, vfs_node_t* parent, int64_t id, const char* name, vfs_node_operations_t* operations, void* fs_data, vfs_node_type type, vfs_node_t** result);
+resource_result_t vfs_lock_node(vfs_node_t* node);
 resource_result_t vfs_release_node(vfs_node_t* node);
 resource_result_t vfs_resolve(vfs_t* vfs, const char* path, vfs_node_t** result);
 resource_result_t vfs_readdir(vfs_node_t* directory, size_t index, vfs_dir_t* entry);

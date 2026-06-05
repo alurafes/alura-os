@@ -12,6 +12,7 @@ void vfs_module_init()
 {
     vfs.last_cache_index = 0;
     vfs_create_node(&vfs, NULL, ramfs.root_node->id, ramfs.root_node->name, &ramfs_node_operations, ramfs.root_node, ramfs.root_node->type, &vfs.root);
+    vfs_lock_node(vfs.root);
 }
 
 resource_result_t vfs_readdir(vfs_node_t* directory, size_t index, vfs_dir_t* entry)
@@ -24,6 +25,7 @@ resource_result_t vfs_readdir(vfs_node_t* directory, size_t index, vfs_dir_t* en
 resource_result_t vfs_resolve(vfs_t* vfs, const char* path, vfs_node_t** result)
 {
     vfs_node_t* current = vfs->root;
+    vfs_lock_node(current);
     char component[VFS_NODE_NAME_LENGTH];
 
     while (*path)
@@ -45,11 +47,12 @@ resource_result_t vfs_resolve(vfs_t* vfs, const char* path, vfs_node_t** result)
         resource_result_t result = current->operations.lookup(current, component, &next);
         if (result != RESOURCE_RESULT_OK) 
         {
-            vfs_release_node(current);
             return result;
         }
-
+        
+        vfs_lock_node(next);
         vfs_release_node(current);
+
         current = next;
 
         if (!current) return RESOURCE_RESULT_NOT_FOUND;
@@ -73,7 +76,6 @@ resource_result_t vfs_cache_query_node(vfs_t* vfs, size_t cache_index, int64_t i
     {
         if (node_head->node->index == id)
         {
-            node_head->node->ref_count++;
             *node = node_head->node;
             return RESOURCE_RESULT_OK;
         }
@@ -145,16 +147,24 @@ resource_result_t vfs_cache_put(vfs_t* vfs, vfs_node_t* node)
     if (node_head_prev) node_head_prev->next = node_head;
     else cache_head->node = node_head;
 
-    node->ref_count++;
-
+    vfs_lock_node(node);
     printf("Node put in cache: %s\n", node->name);
 
     return RESOURCE_RESULT_OK;
 }
 
+resource_result_t vfs_lock_node(vfs_node_t* node)
+{
+    printf("Locking %s -> %d (+1)\n", node->name, node->ref_count);
+    if (!node) return RESOURCE_RESULT_BAD_PARAMETER;
+    node->ref_count++;
+    return RESOURCE_RESULT_OK;
+}
+
 resource_result_t vfs_release_node(vfs_node_t* node)
 {
-    if (!node) return RESOURCE_RESULT_INVALID;
+    printf("Unlocking %s -> %d (-1)\n", node->name, node->ref_count);
+    if (!node) return RESOURCE_RESULT_BAD_PARAMETER;
     node->ref_count--;
     vfs_cache_try_evict(&vfs, node);
     return RESOURCE_RESULT_OK;
@@ -163,7 +173,7 @@ resource_result_t vfs_release_node(vfs_node_t* node)
 resource_result_t vfs_cache_try_evict(vfs_t* vfs, vfs_node_t* node)
 {
     if (!vfs || !node) return RESOURCE_RESULT_BAD_PARAMETER;
-    if (!node || node->ref_count != 0) return RESOURCE_RESULT_STILL_IN_USE;
+    if (!node || node->ref_count != 1) return RESOURCE_RESULT_STILL_IN_USE;
  
     printf("Trying to evict node from cache: %s\n", node->name);
 
@@ -198,6 +208,8 @@ resource_result_t vfs_cache_try_evict(vfs_t* vfs, vfs_node_t* node)
         else vfs->cache = cache_head->next;
         kernel_heap_free(cache_head);
     }
+
+    printf("Evicted %s\n", node->name);
 
     kernel_heap_free(node);
 
