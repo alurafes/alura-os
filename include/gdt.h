@@ -21,7 +21,7 @@
 #define GDT_GRANULARITY_32BIT 0x40
 
 typedef enum gdt_result_t {
-    GDT_RESULT_OK,
+    GDT_RESULT_OK = 0,
     GDT_RESULT_OUT_OF_BOUNDS
 } gdt_result_t;
 

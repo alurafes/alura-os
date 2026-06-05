@@ -10,7 +10,7 @@
 #define IRQ_MAX_ENTRIES_COUNT 16
 
 typedef enum irq_result_t {
-    IRQ_RESULT_OK,
+    IRQ_RESULT_OK = 0,
     IRQ_RESULT_INDEX_ALREADY_IN_USE,
     IRQ_RESULT_OUT_OF_BOUNDS
 } irq_result_t;

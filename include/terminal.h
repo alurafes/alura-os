@@ -13,13 +13,13 @@ typedef struct terminal_point_t {
 } terminal_point_t;
 
 typedef enum terminal_overflow_t {
-    TERMINAL_OVERFLOW_NONE,
+    TERMINAL_OVERFLOW_NONE = 0,
     TERMINAL_OVERFLOW_WRAP,
     TERMINAL_OVERFLOW_NEW_LINE,
 } terminal_overflow_t;
 
 typedef enum terminal_scroll_t {
-    TERMINAL_SCROLL_NONE,
+    TERMINAL_SCROLL_NONE = 0,
     TERMINAL_SCROLL_VERTICAL,
 } terminal_scroll_t;
 
@@ -32,7 +32,7 @@ typedef struct terminal_t {
 } terminal_t;
 
 typedef enum terminal_result_t {
-    TERMINAL_RESULT_OK,
+    TERMINAL_RESULT_OK = 0,
     TERMINAL_RESULT_OUT_OF_BOUNDS,
 } terminal_result_t;
 

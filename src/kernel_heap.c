@@ -1,5 +1,7 @@
 #include "kernel_heap.h"
 
+#include "print.h"
+
 static kernel_heap_t kernel_heap;
 
 void* kernel_heap_allocate_physical_memory(size_t bytes)

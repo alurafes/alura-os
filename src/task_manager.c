@@ -119,7 +119,6 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
 
 void task_manager_idle_task()
 {
-    printf("testing\n");
     while (1) {  
         __asm__ volatile("hlt"); 
     }
@@ -166,7 +165,7 @@ void task_manager_schedule(task_manager_t* task_manager)
             else
             {
                 // prolongating task
-                new_task->task_time_slice = task_manager_calculate_time_slice(task_manager, new_task->task_queue_level);
+                new_task->task_time_slice = task_manager_calculate_time_slice(new_task->task_queue_level);
             }
         }
     }
@@ -179,7 +178,7 @@ task_t* task_manager_pick_task(task_manager_t* task_manager)
         if (task_manager->task_queues[queue_index] != NULL)
         {
             task_t* task = task_manager_dequeue_task(task_manager, queue_index);
-            task->task_time_slice = task_manager_calculate_time_slice(task_manager, queue_index);
+            task->task_time_slice = task_manager_calculate_time_slice(queue_index);
             return task;
         }
     }
@@ -187,7 +186,7 @@ task_t* task_manager_pick_task(task_manager_t* task_manager)
     return task_manager->task_idle;
 }
 
-uint32_t task_manager_calculate_time_slice(task_manager_t* task_manager, uint32_t queue_level)
+uint32_t task_manager_calculate_time_slice(uint32_t queue_level)
 {
     // higher priority tasks get less time to execute so they can switch around quicker
     return TASK_MANAGER_QUEUE_INDEX_BLOCKED * (1 << queue_level);

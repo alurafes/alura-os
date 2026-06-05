@@ -34,7 +34,7 @@ typedef struct vga_color_t {
 #define VGA_COLOR(color) (color.background << 4 | color.foreground)
 
 typedef enum vga_result_t {
-    VGA_RESULT_OK,
+    VGA_RESULT_OK = 0,
 } vga_result_t;
 
 typedef struct vga_t {

@@ -67,7 +67,7 @@ void isr_handler(register_interrupt_data_t* data)
     }
     if (data->interrupt_index == IDT_SYSCALL)
     {
-        printf("syscall\n");
+        syscall_handler(data);
     }
 }
 

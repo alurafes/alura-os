@@ -9,6 +9,8 @@
 #include "idt.h"
 #include "timer.h"
 
+typedef struct resource_t resource_t;
+
 #define TASK_MANAGER_QUEUE_LEVELS 4
 #define TASK_MANAGER_DEFAULT_TIME_SLICE 5
 #define TASK_MANAGER_QUEUE_INDEX_BLOCKED TASK_MANAGER_QUEUE_LEVELS
@@ -20,13 +22,15 @@
 #define TASK_MANAGER_USER_CODE_SELECTOR 0x1B
 #define TASK_MANAGER_USER_DATA_SELECTOR 0x23
 
+#define TASK_MAX_RESOURCES 512
+
 typedef enum task_manager_result_t {
-    TASK_MANAGER_RESULT_OK,
+    TASK_MANAGER_RESULT_OK = 0,
     TASK_MANAGER_RESULT_QUEUE_TASK_NOT_FOUND,
 } task_manager_result_t;
 
 typedef enum task_state_t {
-    TASK_STATE_READY,
+    TASK_STATE_READY = 0,
     TASK_STATE_RUNNING,
     TASK_STATE_BLOCKED,
     TASK_STATE_SLEEPING
@@ -49,6 +53,10 @@ typedef struct task_t {
     uint8_t task_is_user;
 
     struct task_t* next;
+
+    // anything below i wont add into the asm file
+
+    resource_t* resources[TASK_MAX_RESOURCES];
 } task_t;
 
 typedef struct task_manager_t {
@@ -70,7 +78,7 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
 void task_manager_schedule(task_manager_t* task_manager);
 task_t* task_manager_create_idle_task(task_manager_t* task_manager);
 task_t* task_manager_pick_task(task_manager_t* task_manager);
-uint32_t task_manager_calculate_time_slice(task_manager_t* task_manager, uint32_t queue_level);
+uint32_t task_manager_calculate_time_slice(uint32_t queue_level);
 void task_manager_boost_priority_of_all_tasks(task_manager_t* task_manager);
 
 void task_manager_requeue_task(task_manager_t* task_manager, task_t* task, uint32_t used_time_slice);

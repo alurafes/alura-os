@@ -14,6 +14,7 @@ void timer_set_phase()
 
 void timer_irq_handler(register_interrupt_data_t* data)
 {
+    (void)data;
     timer_ticks++;
     task_manager_schedule(&task_manager);
 }

@@ -18,12 +18,14 @@
 #include "timer.h"
 #include "vfs.h"
 
+#include "fs/ramfs.h"
+
 #include <stdint.h>
 #include <stddef.h>
 #include <stdarg.h>
 
 typedef enum kernel_result_t {
-    KERNEL_RESULT_OK
+    KERNEL_RESULT_OK = 0
 } kernel_result_t;
 
 kernel_result_t kernel_initialize(multiboot_info_t* multiboot);

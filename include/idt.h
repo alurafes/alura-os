@@ -4,13 +4,14 @@
 #include <stdint.h>
 
 #include "pic.h"
+#include "syscall.h"
 
 #define IDT_MAX_ENTRIES_COUNT 256
 #define IDT_BASE_ENTRIES_COUNT 32
 #define IDT_SYSCALL 0x80
 
 typedef enum idt_result_t {
-    IDT_RESULT_OK,
+    IDT_RESULT_OK = 0,
     IDT_RESULT_OUT_OF_BOUNDS
 } idt_result_t;
 
