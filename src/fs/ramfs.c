@@ -65,7 +65,7 @@ ramfs_result_t ramfs_create_node(ramfs_t* ramfs, const char* name, vfs_node_type
 
     node->id = ramfs->last_index++;
     node->children_count = 0;
-    strncpy(node->name, name, VFS_NODE_NAME_LENGTH - 1); // todo: better copy function
+    strncpy(node->name, name, VFS_NODE_NAME_LENGTH - 1);
     node->type = type;
     node->data = data;
     node->data_size = data_size;
@@ -78,10 +78,9 @@ ramfs_result_t ramfs_create_node(ramfs_t* ramfs, const char* name, vfs_node_type
 resource_result_t ramfs_read(vfs_node_t* file, void* buffer, size_t length, size_t* read_bytes)
 {
     ramfs_node_t* node = file->fs_data;
-    
+
     size_t length_to_read = length;
     if (length > node->data_size) length_to_read = node->data_size;
-    // todo: right now all tasks share the same page directory, memcpy will work fine. Gotta fix it later
     memcpy(buffer, node->data, length_to_read);
     *read_bytes = length_to_read;
     return RESOURCE_RESULT_OK;

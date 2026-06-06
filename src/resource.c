@@ -33,8 +33,6 @@ resource_result_t resource_remove(task_t* task, size_t index)
     if (!resource) return RESOURCE_RESULT_OK;
 
     kernel_heap_free(resource);
-    // todo: should this own the resource itself? a problem for future me
-
     task->resources[index] = NULL;
 
     return RESOURCE_RESULT_OK;

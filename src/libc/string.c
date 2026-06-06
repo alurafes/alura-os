@@ -58,3 +58,12 @@ void* memcpy(void* dst, const void* src, size_t n)
 
     return dst;
 }
+
+void* memset(void *dst, char ch, size_t size)
+{
+    char* ptr = (char*)dst;
+    while (size--) {
+        *ptr++ = ch;
+    }
+    return dst;
+}

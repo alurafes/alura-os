@@ -32,6 +32,9 @@ int32_t syscall_close(task_t* task, uint32_t resource_index)
 
 int32_t syscall_read(task_t* task, uint32_t resource_index, void* buffer, size_t length)
 {
+    if (task->task_is_user && (uintptr_t)buffer >= KERNEL_VIRTUAL_SPACE_START) return -(int32_t)RESOURCE_RESULT_BAD_PARAMETER;
+    if (resource_index >= TASK_MAX_RESOURCES) return -(int32_t)RESOURCE_RESULT_BAD_PARAMETER;
+
     resource_t* resource = task->resources[resource_index];
     if (!resource) return -(int32_t)RESOURCE_RESULT_INVALID;
 

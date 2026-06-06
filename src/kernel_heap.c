@@ -1,6 +1,7 @@
 #include "kernel_heap.h"
 
 #include "print.h"
+#include "libc/string.h"
 
 static kernel_heap_t kernel_heap;
 
@@ -73,11 +74,7 @@ void* kernel_heap_calloc_into_page_directory(size_t size, page_entry_t* page_dir
 {
     void* memory = kernel_heap_malloc_into_page_directory(size, page_directory, flags);
     if (memory == NULL) return NULL;
-    // todo: move this to memset or something
-    char* ptr = (char*)memory;
-    while (size--) {
-        *ptr++ = 0;
-    }
+    memset(memory, 0, size);
     return memory;
 }
 
