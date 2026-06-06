@@ -66,24 +66,24 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
     task->task_time_slice = TASK_MANAGER_DEFAULT_TIME_SLICE;
     task->task_queue_level = 0; // new tasks with the highest queue level
 
-    uint32_t* kernel_stack = (uint32_t*)kernel_heap_calloc(4096);
-    task->kernel_stack_top = (uint32_t)kernel_stack + 4096;
-    task->kernel_stack_base = (uint32_t)kernel_stack;
+    memory_paging_create_page_directory(&task->page_directory); // todo: panic!!
+    task->task_cr3 = (uint32_t)virtual_to_physical(task->page_directory);
+
+    uint32_t stack_flags = PAGE_READ_WRITE;
+    if (task_is_user) stack_flags |= PAGE_USER;
+
+    uint32_t* stack = (uint32_t*)kernel_heap_calloc_into_page_directory(4096, task->page_directory, stack_flags);
+    task->stack_top = (uint32_t)stack + 4096;
+    task->stack_base = (uint32_t)stack;
 
     task->task_is_user = task_is_user;
-    if (task_is_user)
-    {
-        uint32_t* user_stack = (uint32_t*)kernel_heap_calloc(4096);
-        task->user_stack_top = (uint32_t)user_stack + 4096;
-        task->user_stack_base = (uint32_t)user_stack;
-    }
 
-    uint32_t* task_stack_top = (uint32_t*)task->kernel_stack_top;
+    uint32_t* task_stack_top = (uint32_t*)task->stack_top;
 
     if (task_is_user)
     {
         *--task_stack_top = TASK_MANAGER_USER_DATA_SELECTOR;
-        *--task_stack_top = task->user_stack_top;
+        *--task_stack_top = task->stack_top;
     }
 
     *--task_stack_top = 0x202; // eflags
@@ -110,7 +110,6 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
     *--task_stack_top = data_selector; // gs
 
     task->task_esp = (uint32_t)task_stack_top;
-    task->task_cr3 = (uint32_t)virtual_to_physical(page_directory); // for now we put the kernel page directory.
 
     task_manager_enqueue_task(task_manager, task->task_queue_level, task);
 

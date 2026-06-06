@@ -4,7 +4,7 @@
 
 static kernel_heap_t kernel_heap;
 
-void* kernel_heap_allocate_physical_memory(size_t bytes)
+void* kernel_heap_allocate_physical_memory(size_t bytes, page_entry_t* page_directory, uint32_t flags)
 {
     size_t bytes_to_allocate = ALIGN_UP(bytes);
     size_t pages_to_allocate = bytes_to_allocate / PAGE_SIZE;
@@ -15,7 +15,7 @@ void* kernel_heap_allocate_physical_memory(size_t bytes)
     {
         void* physical_allocated = memory_bitmap_allocate();
         if (!physical_allocated) return NULL;
-        memory_paging_map((uint32_t)physical_allocated, (uint32_t)address, PAGE_READ_WRITE);
+        memory_paging_map(page_directory, (uint32_t)physical_allocated, (uint32_t)address, flags);
         address += PAGE_SIZE;
     }
     void* allocated_address = (void*)kernel_heap.heap_break;
@@ -23,12 +23,12 @@ void* kernel_heap_allocate_physical_memory(size_t bytes)
     return allocated_address;
 }
 
-kernel_heap_header_t* kernel_heap_allocate_more_headers(size_t headers_to_allocate)
+kernel_heap_header_t* kernel_heap_allocate_more_headers(size_t headers_to_allocate, page_entry_t* page_directory, uint32_t flags)
 {
     size_t bytes_to_allocate = headers_to_allocate * sizeof(kernel_heap_header_t);
     if (bytes_to_allocate < KERNEL_HEAP_MINIMUM_HEADERS_TO_ALLOCATE * sizeof(kernel_heap_header_t)) 
         bytes_to_allocate = KERNEL_HEAP_MINIMUM_HEADERS_TO_ALLOCATE * sizeof(kernel_heap_header_t);
-    void* allocated_memory = (kernel_heap_header_t*)kernel_heap_allocate_physical_memory(bytes_to_allocate);
+    void* allocated_memory = (kernel_heap_header_t*)kernel_heap_allocate_physical_memory(bytes_to_allocate, page_directory, flags);
     if (allocated_memory == NULL) return NULL;
     kernel_heap_header_t* header = (kernel_heap_header_t*)allocated_memory;
     header->size = bytes_to_allocate / sizeof(kernel_heap_header_t);
@@ -37,7 +37,7 @@ kernel_heap_header_t* kernel_heap_allocate_more_headers(size_t headers_to_alloca
     return kernel_heap.free_headers_head;
 }
 
-void* kernel_heap_malloc(size_t size)
+void* kernel_heap_malloc_into_page_directory(size_t size, page_entry_t* page_directory, uint32_t flags)
 {
     if (size == 0) return NULL;
     size_t headers_to_allocate = (size + sizeof(kernel_heap_header_t) - 1) / sizeof(kernel_heap_header_t) + 1;
@@ -61,7 +61,7 @@ void* kernel_heap_malloc(size_t size)
         }
         if (current_header == kernel_heap.free_headers_head)
         {
-            if (kernel_heap_allocate_more_headers(headers_to_allocate) == NULL) return NULL;
+            if (kernel_heap_allocate_more_headers(headers_to_allocate, page_directory, flags) == NULL) return NULL;
         }
         previous_header = current_header;
         current_header = current_header->next;
@@ -69,9 +69,9 @@ void* kernel_heap_malloc(size_t size)
     return NULL;
 }
 
-void* kernel_heap_calloc(size_t size)
+void* kernel_heap_calloc_into_page_directory(size_t size, page_entry_t* page_directory, uint32_t flags)
 {
-    void* memory = kernel_heap_malloc(size);
+    void* memory = kernel_heap_malloc_into_page_directory(size, page_directory, flags);
     if (memory == NULL) return NULL;
     // todo: move this to memset or something
     char* ptr = (char*)memory;
@@ -79,6 +79,16 @@ void* kernel_heap_calloc(size_t size)
         *ptr++ = 0;
     }
     return memory;
+}
+
+void* kernel_heap_malloc(size_t size)
+{
+    return kernel_heap_malloc_into_page_directory(size, kernel_page_directory, PAGE_READ_WRITE);
+}
+
+void* kernel_heap_calloc(size_t size)
+{
+    return kernel_heap_calloc_into_page_directory(size, kernel_page_directory, PAGE_READ_WRITE);
 }
 
 void kernel_heap_free(void* address)

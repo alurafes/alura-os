@@ -7,6 +7,9 @@
 
 #define KERNEL_HEAP_MINIMUM_HEADERS_TO_ALLOCATE 1024
 
+void* kernel_heap_malloc_into_page_directory(size_t size, page_entry_t* page_directory, uint32_t flags);
+void* kernel_heap_calloc_into_page_directory(size_t size, page_entry_t* page_directory, uint32_t flags);
+
 void* kernel_heap_malloc(size_t size);
 void* kernel_heap_calloc(size_t size);
 void kernel_heap_free(void* address);

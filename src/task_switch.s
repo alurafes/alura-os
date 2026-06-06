@@ -11,7 +11,7 @@ task_manager_task_switch:
 
     mov [edi + task_t.task_esp], esp      ; save current stack to old task's esp variable
     
-    mov eax, [esi + task_t.kernel_stack_top]      ; save new task's stack 
+    mov eax, [esi + task_t.stack_top]      ; save new task's stack 
     mov [tss + tss_entry_t.esp0], eax
 
     mov [task_manager + task_manager_t.task_current], esi

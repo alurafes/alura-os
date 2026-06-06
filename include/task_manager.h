@@ -45,11 +45,9 @@ typedef struct task_t {
     uint32_t task_time_slice;
     uint32_t task_queue_level;
 
-    uint32_t kernel_stack_base;
-    uint32_t kernel_stack_top;
+    uint32_t stack_base;
+    uint32_t stack_top;
 
-    uint32_t user_stack_base;
-    uint32_t user_stack_top;
     uint8_t task_is_user;
 
     struct task_t* next;
@@ -57,6 +55,7 @@ typedef struct task_t {
     // anything below i wont add into the asm file
 
     resource_t* resources[TASK_MAX_RESOURCES];
+    page_entry_t* page_directory;
 } task_t;
 
 typedef struct task_manager_t {
