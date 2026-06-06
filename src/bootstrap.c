@@ -1,7 +1,5 @@
 #include "memory_paging.h"
 
-#include "vga.h"
-
 #define BOOTSTRAP_4MB_PAGES 16
 
 static page_entry_t __attribute__((section(".bootstrap.data"), aligned(4096))) bootstrap_page_directory[1024];

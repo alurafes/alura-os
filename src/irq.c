@@ -1,8 +1,5 @@
 #include "irq.h"
 
-#include "print.h"
-#include "vga.h"
-
 void irq_handler(register_interrupt_data_t* data)
 {
     int irq_index = data->interrupt_index - PIC1_REMAPPED_VECTOR;

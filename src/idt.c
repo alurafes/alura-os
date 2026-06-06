@@ -1,7 +1,8 @@
 #include "idt.h"
 
 #include "print.h"
-#include "vga.h"
+
+#include "drivers/vga.h"
 
 idt_result_t idt_create(idt_t* idt)
 {

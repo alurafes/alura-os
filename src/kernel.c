@@ -59,6 +59,8 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     ramfs_driver_init();
     vfs_module_init();
 
+    keyboard_driver_init();
+
     printf("alura-os is loaded!\n");
     __asm__ volatile("sti");
 

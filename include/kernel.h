@@ -8,7 +8,6 @@
 #include "idt.h"
 #include "irq.h"
 #include "terminal.h"
-#include "vga.h"
 #include "print.h"
 #include "pic.h"
 #include "memory_bitmap.h"
@@ -20,6 +19,9 @@
 #include "elf_executable.h"
 
 #include "fs/ramfs.h"
+
+#include "drivers/vga.h"
+#include "drivers/keyboard.h"
 
 #include <stdint.h>
 #include <stddef.h>

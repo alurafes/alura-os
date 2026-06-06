@@ -1,8 +1,6 @@
 #include "memory_paging.h"
 #include "memory.h"
 
-#include "vga.h"
-
 void memory_paging_reset_entry(page_entry_t* entry)
 {
     for (uint32_t i = 0; i < KERNEL_PDE_ENTRIES; ++i)
