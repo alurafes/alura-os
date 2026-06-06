@@ -7,6 +7,7 @@ static uint32_t task_id = 0;
 
 void task_manager_enqueue_task(task_manager_t* task_manager, size_t queue_index, task_t* task)
 {
+    if (task == task_manager->task_idle) return;
     task->next = NULL;
 
     if (task_manager->task_queues[queue_index] == NULL)
@@ -125,16 +126,19 @@ void task_manager_idle_task()
 
 void task_manager_module_init()
 {
-    task_manager.task_idle = task_manager_task_create(&task_manager, task_manager_idle_task, 0);
-    task_manager.task_idle->task_state = TASK_STATE_RUNNING;
-    task_manager.task_current = task_manager.task_idle;
-    task_manager.task_next = NULL;
-    task_manager.task_needs_switching = 0;
-    task_manager.last_priority_boost_at_ticks = timer_get_ticks();
     for (size_t i = 0; i < TASK_MANAGER_QUEUE_LEVELS; ++i)
     {
         task_manager.task_queues[i] = NULL;
     }
+
+    task_manager.last_priority_boost_at_ticks = timer_get_ticks();
+    task_manager.task_idle = task_manager_task_create(&task_manager, task_manager_idle_task, 0);
+
+    task_manager.task_current = NULL;
+    task_manager.task_next = task_manager.task_idle;
+    
+    task_manager.task_idle->task_state = TASK_STATE_RUNNING;
+    task_manager.task_needs_switching = 1;
 }
 
 void task_manager_schedule(task_manager_t* task_manager)
@@ -181,7 +185,6 @@ task_t* task_manager_pick_task(task_manager_t* task_manager)
             return task;
         }
     }
-
     return task_manager->task_idle;
 }
 
@@ -193,6 +196,7 @@ uint32_t task_manager_calculate_time_slice(uint32_t queue_level)
 
 void task_manager_requeue_task(task_manager_t* task_manager, task_t* task, uint32_t used_time_slice)
 {
+    if (task == task_manager->task_idle) return;
     if (used_time_slice && task->task_queue_level < TASK_MANAGER_QUEUE_LEVELS - 1)
     {
         task->task_queue_level++;

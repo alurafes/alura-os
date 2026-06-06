@@ -216,12 +216,12 @@ resource_result_t vfs_close(resource_t* resource)
     return vfs_release_node(node);
 }
 
-resource_result_t vfs_read(resource_t* resource, void* buffer, size_t length, size_t* read_bytes)
+resource_result_t vfs_read(resource_t* resource, size_t offset, void* buffer, size_t length, size_t* read_bytes)
 {
     if (!resource || !buffer || !length || !read_bytes) return RESOURCE_RESULT_BAD_PARAMETER;
     vfs_node_t* node = resource->data;
 
     if (node->type != VFS_NODE_TYPE_FILE) return RESOURCE_RESULT_INVALID;
 
-    return node->operations.read(node, buffer, length, read_bytes);
+    return node->operations.read(node, offset, buffer, length, read_bytes);
 }

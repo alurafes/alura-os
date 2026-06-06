@@ -25,8 +25,7 @@ typedef struct resource_t resource_t;
 
 typedef struct resource_operations_t {
     resource_result_t (*close)(resource_t* resource);
-    resource_result_t (*read)(resource_t* resource, void* buffer, size_t length, size_t* read_bytes);
-    resource_result_t (*write)(resource_t* resource, const void* buffer, size_t length, size_t* wrote_bytes);
+    resource_result_t (*read)(resource_t* resource, size_t offset, void* buffer, size_t length, size_t* read_bytes);
 } resource_operations_t;
 
 typedef struct resource_t {

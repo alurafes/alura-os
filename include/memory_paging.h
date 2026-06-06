@@ -25,6 +25,7 @@ typedef enum memory_paging_result_t {
 extern page_entry_t* kernel_page_directory;
 void memory_paging_module_init();
 
+void memory_paging_set(page_entry_t* page_directory);
 memory_paging_result_t memory_paging_create_kernel_page_directory();
 memory_paging_result_t memory_paging_create_page_directory(page_entry_t** result);
 memory_paging_result_t memory_paging_map(page_entry_t* page_directory, uint32_t physical_address, uint32_t virtual_address, uint32_t flags);

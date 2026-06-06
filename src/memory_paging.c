@@ -18,9 +18,9 @@ static inline void memory_paging_disable_pse() {
     __asm__ volatile("mov %0, %%cr4" :: "r"(cr4));
 }
 
-static inline void memory_paging_enable()
+void memory_paging_set(page_entry_t* page_directory)
 {
-    page_entry_t* page_directory_physical = (page_entry_t*)virtual_to_physical(kernel_page_directory);
+    page_entry_t* page_directory_physical = (page_entry_t*)virtual_to_physical(page_directory);
     __asm__ volatile("mov %0, %%cr3" : : "r"(page_directory_physical));
     uint32_t cr0 = 0;
     __asm__ volatile("mov %%cr0, %0" : "=r"(cr0)); 
@@ -40,7 +40,7 @@ page_entry_t* kernel_page_directory = NULL;
 void memory_paging_module_init()
 {
     memory_paging_create_kernel_page_directory();
-    memory_paging_enable();
+    memory_paging_set(kernel_page_directory);
     memory_paging_disable_pse();
 }
 

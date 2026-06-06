@@ -39,7 +39,8 @@ int32_t syscall_read(task_t* task, uint32_t resource_index, void* buffer, size_t
     if (!resource) return -(int32_t)RESOURCE_RESULT_INVALID;
 
     size_t read_bytes = 0;
-    resource_result_t result = resource->operations.read(resource, buffer, length, &read_bytes);
+    // todo: passing 0 as offset. Gotta switch to system v abi soon (horrible stack parameters stuff)
+    resource_result_t result = resource->operations.read(resource, 0, buffer, length, &read_bytes);
     if (result != RESOURCE_RESULT_OK) return -(int32_t)result;
 
     return read_bytes;

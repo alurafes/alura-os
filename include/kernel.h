@@ -17,6 +17,7 @@
 #include "task_manager.h"
 #include "timer.h"
 #include "vfs.h"
+#include "elf_executable.h"
 
 #include "fs/ramfs.h"
 
