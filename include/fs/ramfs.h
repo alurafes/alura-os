@@ -20,6 +20,8 @@ typedef struct ramfs_node_t {
     size_t children_count;
     char name[VFS_NODE_NAME_LENGTH];
     vfs_node_type type;
+    void* data;
+    size_t data_size;
 } ramfs_node_t;
 
 typedef enum ramfs_result_t {
@@ -37,8 +39,9 @@ typedef struct ramfs_t {
 extern ramfs_t ramfs;
 void ramfs_driver_init();
 
-ramfs_result_t ramfs_create_node(ramfs_t* ramfs, const char* name, vfs_node_type type, ramfs_node_t** result);
+ramfs_result_t ramfs_create_node(ramfs_t* ramfs, const char* name, vfs_node_type type, void* data, size_t data_size, ramfs_node_t** result);
 resource_result_t ramfs_lookup(vfs_node_t* directory, const char* path, vfs_node_t** result);
 resource_result_t ramfs_readdir(vfs_node_t* directory, size_t index, vfs_dir_t* entry);
+resource_result_t ramfs_read(vfs_node_t* file, void* buffer, size_t length, size_t* read_bytes);
 
 #endif // ALURA_FS_RAMFS_H

@@ -11,13 +11,32 @@ static inline int syscall1(int n, int a1) {
     return ret;
 }
 
+static inline int syscall3(int n, int a1, int a2, int a3) {
+    int ret;
+    asm volatile (
+        "int $0x80"
+        : "=a"(ret)
+        : "a"(n), "b"(a1), "c"(a2), "d"(a3)
+        : "memory"
+    );
+    return ret;
+}
+
+
 void simple_task()
 {
     const char* path = "/dir_a/test_file";
-    int result = syscall1(SYSCALL_OPEN, (int)path);
-    printf("result: %d\n", result);
-    result = syscall1(SYSCALL_CLOSE, result);
-    printf("result: %d\n", result);
+    int resource_index = syscall1(SYSCALL_OPEN, (int)path);
+    printf("open resource: %d (file %s)\n", resource_index, path);
+
+    char buffer[64];
+    int read_bytes = syscall3(SYSCALL_READ, resource_index, (int)buffer, 64);
+    printf("read bytes: %d\n", read_bytes);
+
+    printf("file contents: %s\n", buffer);
+    
+    syscall1(SYSCALL_CLOSE, resource_index);
+    
     while (1) {  
         __asm__ volatile("hlt"); 
     }

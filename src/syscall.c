@@ -30,6 +30,18 @@ int32_t syscall_close(task_t* task, uint32_t resource_index)
     return 0;
 }
 
+int32_t syscall_read(task_t* task, uint32_t resource_index, void* buffer, size_t length)
+{
+    resource_t* resource = task->resources[resource_index];
+    if (!resource) return -(int32_t)RESOURCE_RESULT_INVALID;
+
+    size_t read_bytes = 0;
+    resource_result_t result = resource->operations.read(resource, buffer, length, &read_bytes);
+    if (result != RESOURCE_RESULT_OK) return -(int32_t)result;
+
+    return read_bytes;
+}
+
 void syscall_handler(register_interrupt_data_t* data)
 {
     task_t* task = task_manager.task_current;
@@ -43,6 +55,11 @@ void syscall_handler(register_interrupt_data_t* data)
         case SYSCALL_CLOSE:
         {
             data->eax = syscall_close(task, data->ebx);
+            break;
+        }
+        case SYSCALL_READ:
+        {
+            data->eax = syscall_read(task, data->ebx, (void*)data->ecx, data->edx);
             break;
         }
     }

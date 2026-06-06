@@ -41,10 +41,3 @@ void pic_send_eoi(int irq)
     if (irq >= 8) io_outb(PIC2_COMMAND, PIC_COMMAND_EOI);
     io_outb(PIC1_COMMAND, PIC_COMMAND_EOI);
 }
-
-void pic_print_masks()
-{
-    uint8_t m1 = io_inb(PIC1_DATA);
-    uint8_t m2 = io_inb(PIC2_DATA);
-    printf("PIC masks: master=%x slave=%x\n", m1, m2);
-}

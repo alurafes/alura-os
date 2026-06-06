@@ -9,6 +9,7 @@ typedef struct register_interrupt_data_t register_interrupt_data_t;
 
 #define SYSCALL_OPEN 0
 #define SYSCALL_CLOSE 1
+#define SYSCALL_READ 2
 
 void syscall_handler(register_interrupt_data_t* data);
 

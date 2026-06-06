@@ -4,7 +4,8 @@
 #include "print.h"
 
 resource_operations_t vfs_operations = {
-    .close = vfs_close
+    .close = vfs_close,
+    .read = vfs_read
 };
 
 vfs_t vfs;
@@ -148,14 +149,12 @@ resource_result_t vfs_cache_put(vfs_t* vfs, vfs_node_t* node)
     else cache_head->node = node_head;
 
     vfs_lock_node(node);
-    printf("Node put in cache: %s\n", node->name);
 
     return RESOURCE_RESULT_OK;
 }
 
 resource_result_t vfs_lock_node(vfs_node_t* node)
 {
-    printf("Locking %s -> %d (+1)\n", node->name, node->ref_count);
     if (!node) return RESOURCE_RESULT_BAD_PARAMETER;
     node->ref_count++;
     return RESOURCE_RESULT_OK;
@@ -163,7 +162,6 @@ resource_result_t vfs_lock_node(vfs_node_t* node)
 
 resource_result_t vfs_release_node(vfs_node_t* node)
 {
-    printf("Unlocking %s -> %d (-1)\n", node->name, node->ref_count);
     if (!node) return RESOURCE_RESULT_BAD_PARAMETER;
     node->ref_count--;
     vfs_cache_try_evict(&vfs, node);
@@ -174,8 +172,6 @@ resource_result_t vfs_cache_try_evict(vfs_t* vfs, vfs_node_t* node)
 {
     if (!vfs || !node) return RESOURCE_RESULT_BAD_PARAMETER;
     if (!node || node->ref_count != 1) return RESOURCE_RESULT_STILL_IN_USE;
- 
-    printf("Trying to evict node from cache: %s\n", node->name);
 
     vfs_node_cache_t* cache_head_prev = NULL;
     vfs_node_cache_t* cache_head = vfs->cache;
@@ -209,8 +205,6 @@ resource_result_t vfs_cache_try_evict(vfs_t* vfs, vfs_node_t* node)
         kernel_heap_free(cache_head);
     }
 
-    printf("Evicted %s\n", node->name);
-
     kernel_heap_free(node);
 
     return RESOURCE_RESULT_OK;
@@ -220,4 +214,14 @@ resource_result_t vfs_close(resource_t* resource)
 {
     vfs_node_t* node = resource->data;
     return vfs_release_node(node);
+}
+
+resource_result_t vfs_read(resource_t* resource, void* buffer, size_t length, size_t* read_bytes)
+{
+    if (!resource || !buffer || !length || !read_bytes) return RESOURCE_RESULT_BAD_PARAMETER;
+    vfs_node_t* node = resource->data;
+
+    if (node->type != VFS_NODE_TYPE_FILE) return RESOURCE_RESULT_INVALID;
+
+    return node->operations.read(node, buffer, length, read_bytes);
 }

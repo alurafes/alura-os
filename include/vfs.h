@@ -16,6 +16,7 @@ typedef struct vfs_dir_t vfs_dir_t;
 typedef struct vfs_node_operations_t {
     resource_result_t (*lookup)(vfs_node_t* directory, const char* path, vfs_node_t** result);
     resource_result_t (*readdir)(vfs_node_t* directory, size_t index, vfs_dir_t* entry);
+    resource_result_t (*read)(vfs_node_t* file, void* buffer, size_t length, size_t* read_bytes);
 } vfs_node_operations_t;
 
 typedef enum vfs_node_type {
@@ -74,5 +75,6 @@ resource_result_t vfs_cache_put(vfs_t* vfs, vfs_node_t* node);
 resource_result_t vfs_cache_try_evict(vfs_t* vfs, vfs_node_t* node);
 
 resource_result_t vfs_close(resource_t* resource);
+resource_result_t vfs_read(resource_t* resource, void* buffer, size_t length, size_t* read_bytes);
 
 #endif // ALURA_VFS_H
