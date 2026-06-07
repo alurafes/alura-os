@@ -1,5 +1,4 @@
 global isr_stubs
-global isr_syscall
 extern isr_stub_handler
 
 %macro ISR_STUB 1
@@ -37,7 +36,8 @@ isr_stubs:
 %endrep
 
 ; using int 0x80
-isr_syscall:
-    dd isr128
 
 ISR_STUB 128
+
+global isr_syscall
+isr_syscall equ isr128

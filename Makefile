@@ -1,9 +1,9 @@
 # Tools
 
-CC      := gcc
+CC      := i686-elf-gcc
 AS      := nasm
-LD      := ld
-GRUB    := grub2-mkrescue
+LD      := i686-elf-ld
+GRUB    := i686-elf-grub-mkrescue
 QEMU    := qemu-system-i386
 
 # Build Flags

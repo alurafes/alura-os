@@ -22,26 +22,6 @@ static inline int syscall3(int n, int a1, int a2, int a3) {
     return ret;
 }
 
-
-void simple_task()
-{
-    const char* path = "/dir_a/test_file";
-    int resource_index = syscall1(SYSCALL_OPEN, (int)path);
-    printf("open resource: %d (file %s)\n", resource_index, path);
-
-    char buffer[64];
-    int read_bytes = syscall3(SYSCALL_READ, resource_index, (int)buffer, 64);
-    printf("read bytes: %d\n", read_bytes);
-
-    printf("file contents: %s\n", buffer);
-    
-    syscall1(SYSCALL_CLOSE, resource_index);
-    
-    while (1) {  
-        __asm__ volatile("hlt"); 
-    }
-}
-
 kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
 {
     memory_bitmap_module_init(multiboot);
@@ -62,6 +42,8 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     keyboard_driver_init();
 
     printf("alura-os is loaded!\n");
+    printf("%d\n", elf_load_and_execute("/dir_a/test_file"));
+
     __asm__ volatile("sti");
 
     return KERNEL_RESULT_OK;

@@ -33,6 +33,13 @@ task_manager_task_switch:
     pop fs
     pop es
     pop ds
-    popad
+    pop edi
+    pop esi
+    pop ebp
+    pop ebx
+    pop edx
+    pop ecx
+    pop eax 
+
     add esp, 8
     iret

@@ -1,5 +1,6 @@
 #include "task_manager.h"
 #include "print.h"
+#include "libc/string.h"
 
 task_manager_t task_manager;
 
@@ -43,9 +44,9 @@ task_manager_result_t task_manager_remove_task_from_queue(task_manager_t* task_m
         return TASK_MANAGER_RESULT_OK;
     }
     task_t* head = task_manager->task_queues[queue_index];
-    while (head != NULL)
+    while (head->next != NULL)
     {
-        if (head == task)
+        if (head->next == task)
         {
             head->next = task->next;
             task->next = NULL;
@@ -56,7 +57,7 @@ task_manager_result_t task_manager_remove_task_from_queue(task_manager_t* task_m
     return TASK_MANAGER_RESULT_QUEUE_TASK_NOT_FOUND;
 }
 
-task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(void), uint8_t task_is_user)
+task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(void), uint8_t task_is_user, uint8_t enqueue)
 {
     task_t* task = (task_t*)kernel_heap_calloc(sizeof(task_t)); 
 
@@ -70,12 +71,15 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
     memory_paging_create_page_directory(&task->page_directory); // todo: panic!!
     task->task_cr3 = (uint32_t)virtual_to_physical(task->page_directory);
 
-    uint32_t stack_flags = PAGE_READ_WRITE;
-    if (task_is_user) stack_flags |= PAGE_USER;
-
-    uint32_t* stack = (uint32_t*)kernel_heap_calloc_into_page_directory(4096, task->page_directory, stack_flags);
-    task->stack_top = (uint32_t)stack + 4096;
-    task->stack_base = (uint32_t)stack;
+    uint32_t* kernel_stack = kernel_heap_calloc_into_page_directory(PAGE_SIZE, task->page_directory, PAGE_READ_WRITE);
+    task->stack_base = (uint32_t)kernel_stack;
+    task->stack_top  = (uint32_t)kernel_stack + PAGE_SIZE;
+ 
+    if (task_is_user)
+    {
+        void* phys = memory_bitmap_allocate();
+        memory_paging_map(task->page_directory, (uint32_t)phys, USER_STACK_TOP - PAGE_SIZE, PAGE_USER | PAGE_READ_WRITE);
+    }
 
     task->task_is_user = task_is_user;
 
@@ -84,7 +88,7 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
     if (task_is_user)
     {
         *--task_stack_top = TASK_MANAGER_USER_DATA_SELECTOR;
-        *--task_stack_top = task->stack_top;
+        *--task_stack_top = USER_STACK_TOP;
     }
 
     *--task_stack_top = 0x202; // eflags
@@ -93,12 +97,11 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
 
     *--task_stack_top = 0; // irq number
     *--task_stack_top = 0; // error code
-    
+
     *--task_stack_top = 0; // eax
     *--task_stack_top = 0; // ecx
     *--task_stack_top = 0; // edx
     *--task_stack_top = 0; // ebx
-    *--task_stack_top = 0; // esp
     *--task_stack_top = 0; // ebp
     *--task_stack_top = 0; // esi
     *--task_stack_top = 0; // edi
@@ -112,14 +115,14 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
 
     task->task_esp = (uint32_t)task_stack_top;
 
-    task_manager_enqueue_task(task_manager, task->task_queue_level, task);
+    if (enqueue) task_manager_enqueue_task(task_manager, task->task_queue_level, task);
 
     return task;
 }
 
 void task_manager_idle_task()
 {
-    while (1) {  
+    while (1) {
         __asm__ volatile("hlt"); 
     }
 }
@@ -132,7 +135,7 @@ void task_manager_module_init()
     }
 
     task_manager.last_priority_boost_at_ticks = timer_get_ticks();
-    task_manager.task_idle = task_manager_task_create(&task_manager, task_manager_idle_task, 0);
+    task_manager.task_idle = task_manager_task_create(&task_manager, task_manager_idle_task, 0, 0);
 
     task_manager.task_current = NULL;
     task_manager.task_next = task_manager.task_idle;
@@ -153,22 +156,32 @@ void task_manager_schedule(task_manager_t* task_manager)
 
         if (task_manager->task_current->task_time_slice <= 0)
         {
-            if (task_manager->task_current->task_state == TASK_STATE_RUNNING)
+            task_t* old_task = task_manager->task_current;
+
+            if (old_task != task_manager->task_idle &&
+                old_task->task_state == TASK_STATE_RUNNING)
             {
-                task_manager_requeue_task(task_manager, task_manager->task_current, 1);
+                task_manager_requeue_task(
+                    task_manager,
+                    old_task,
+                    1);
             }
 
-            task_t* new_task = task_manager_pick_task(task_manager);
-            if (new_task != task_manager->task_current)
+            task_t* new_task =
+                task_manager_pick_task(task_manager);
+
+            new_task->task_state = TASK_STATE_RUNNING;
+
+            if (new_task != old_task)
             {
-                new_task->task_state = TASK_STATE_RUNNING;
                 task_manager->task_next = new_task;
                 task_manager->task_needs_switching = 1;
-            } 
+            }
             else
             {
-                // prolongating task
-                new_task->task_time_slice = task_manager_calculate_time_slice(new_task->task_queue_level);
+                new_task->task_time_slice =
+                    task_manager_calculate_time_slice(
+                        new_task->task_queue_level);
             }
         }
     }

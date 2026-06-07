@@ -44,7 +44,7 @@ elf_result_t elf_load_and_execute(const char *path)
     }
 
     // todo: user or not user; kill task on failure, bla bla
-    task_t* task = task_manager_task_create(&task_manager, (void*)header.e_entry, 0);
+    task_t* task = task_manager_task_create(&task_manager, (void*)header.e_entry, 1, 1);
 
     for (size_t i = 0; i < header.e_phnum; ++i)
     {

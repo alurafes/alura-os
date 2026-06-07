@@ -1,9 +1,9 @@
 #ifndef ALURA_SYSCALL_H
 #define ALURA_SYSCALL_H
 
-typedef struct register_interrupt_data_t register_interrupt_data_t;
-
 #include "task_manager.h"
+
+#include "idt.h"
 
 // todo: figure out a better way
 

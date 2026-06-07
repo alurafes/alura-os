@@ -4,7 +4,6 @@
 #include <stdint.h>
 
 #include "pic.h"
-#include "syscall.h"
 
 #define IDT_MAX_ENTRIES_COUNT 256
 #define IDT_BASE_ENTRIES_COUNT 32
@@ -41,14 +40,38 @@ extern idt_t idt;
 void idt_module_init();
 
 extern void* isr_stubs[];
-extern void* isr_syscall;
+extern void isr_syscall(void);
 
-typedef struct register_interrupt_data_t {
-    uint32_t gs, fs, es, ds;
-    uint32_t edi, esi, ebp, esp, ebx, edx, ecx, eax;
-    uint32_t interrupt_index, error_code;
-    uint32_t eip, cs, eflags, useresp, ss;
-} __attribute__((packed)) register_interrupt_data_t;
+typedef struct __attribute__((packed))
+{
+    /* segment registers (pushed last by isr_stub_handler, so lowest addr) */
+    uint32_t gs;
+    uint32_t fs;
+    uint32_t es;
+    uint32_t ds;
+ 
+    /* general purpose (no esp field - it is no longer pushed) */
+    uint32_t edi;
+    uint32_t esi;
+    uint32_t ebp;
+    uint32_t ebx;
+    uint32_t edx;
+    uint32_t ecx;
+    uint32_t eax;
+ 
+    /* pushed by isr_stubs.s */
+    uint32_t interrupt_index;
+    uint32_t error_code;
+ 
+    /* pushed by CPU */
+    uint32_t eip;
+    uint32_t cs;
+    uint32_t eflags;
+ 
+    /* only valid on privilege-level change (ring 3 -> ring 0) */
+    uint32_t useresp;
+    uint32_t ss;
+} register_interrupt_data_t;
 
 void isr_handler(register_interrupt_data_t* data);
 

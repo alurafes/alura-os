@@ -46,6 +46,12 @@ int32_t syscall_read(task_t* task, uint32_t resource_index, void* buffer, size_t
     return read_bytes;
 }
 
+int32_t syscall_print(task_t* task, const char* message)
+{
+    printf("<task %d>: %s", task->task_id, message);
+    return 0;
+}
+
 void syscall_handler(register_interrupt_data_t* data)
 {
     task_t* task = task_manager.task_current;
@@ -64,6 +70,11 @@ void syscall_handler(register_interrupt_data_t* data)
         case SYSCALL_READ:
         {
             data->eax = syscall_read(task, data->ebx, (void*)data->ecx, data->edx);
+            break;
+        }
+        case 4:
+        {
+            data->eax = syscall_print(task, (const char*)data->ebx);
             break;
         }
     }

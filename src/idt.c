@@ -4,6 +4,8 @@
 
 #include "drivers/vga.h"
 
+#include "syscall.h"
+
 idt_result_t idt_create(idt_t* idt)
 {
     idt->pointer.limit = sizeof(idt->entries) - 1;
@@ -14,8 +16,7 @@ idt_result_t idt_create(idt_t* idt)
         idt_set_entry(idt, i, (uint32_t)isr_stubs[i], 0x08, 0x8E); // 0b10001111 - 1 - present | 00 - kernel | 0 - zero | 1110 - interrupt gate
     }
 
-    idt_set_entry(idt, IDT_SYSCALL, (uint32_t)isr_syscall, 0x08, 0xEF);
-
+    idt_set_entry(idt, IDT_SYSCALL, (uint32_t)isr_syscall, 0x08, 0xEE);
     idt_flush(&idt->pointer);
     return IDT_RESULT_OK;
 }
@@ -40,11 +41,10 @@ void idt_flush(idt_pointer_t* pointer)
 
 void isr_handler(register_interrupt_data_t* data)
 {
-    // exception
     if (data->interrupt_index < PIC1_REMAPPED_VECTOR)
     {
         vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_RED, .foreground = VGA_COLOR_BLACK});
-        printf("\n\nException #%x: Error Code: %x\nRegisters:\ngs = %x, fs = %x, es = %x, ds = %x\nedi = %x, esi = %x, ebp = %x, esp = %x, ebx = %x, edx = %x, ecx = %x, eax = %x\neip = %x, cs = %x, eflags = %x, useresp = %x, ss = %x", 
+        printf("\n\nException #%x: Error Code: %x\nRegisters:\ngs = %x, fs = %x, es = %x, ds = %x\nedi = %x, esi = %x, ebp = %x, ebx = %x, edx = %x, ecx = %x, eax = %x\neip = %x, cs = %x, eflags = %x, useresp = %x, ss = %x", 
             data->interrupt_index, 
             data->error_code, 
             data->gs, 
@@ -54,7 +54,6 @@ void isr_handler(register_interrupt_data_t* data)
             data->edi, 
             data->esi, 
             data->ebp, 
-            data->esp, 
             data->ebx,
             data->edx, 
             data->ecx, 

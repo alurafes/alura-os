@@ -5,7 +5,6 @@ isr_stub_handler:
     push ecx
     push edx
     push ebx
-    push esp
     push ebp
     push esi
     push edi
@@ -31,10 +30,37 @@ isr_stub_handler:
     pop edi
     pop esi
     pop ebp
-    pop esp
     pop ebx
     pop edx
     pop ecx
     pop eax 
     add esp, 8 ; get rid of error code and isr index
     iret
+
+
+;     global isr_stub_handler
+; extern isr_handler
+; isr_stub_handler:
+;     push gs
+;     push fs
+;     push es
+;     push ds
+;     pushad
+; 
+;     mov ax, 0x10 ; kernel data
+;     mov ds, ax
+;     mov es, ax
+;     mov fs, ax
+;     mov gs, ax
+; 
+;     push esp
+;     call isr_handler
+;     add esp, 4
+; 
+;     popad
+;     pop ds
+;     pop es
+;     pop fs
+;     pop gs
+;     add esp, 8 ; get rid of error code and isr index
+;     iret

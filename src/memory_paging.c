@@ -55,12 +55,16 @@ memory_paging_result_t memory_paging_map(page_entry_t* page_directory, uintptr_t
 
         page_entry_t* new_page_table_entry_virtual = (page_entry_t*)physical_to_virtual(new_page_table_entry);
         memory_paging_reset_entry(new_page_table_entry_virtual);
-        page_directory[page_directory_index] = ((uint32_t)new_page_table_entry) | PAGE_PRESENT | PAGE_READ_WRITE;
+        page_directory[page_directory_index] = ((uint32_t)new_page_table_entry) | flags | PAGE_PRESENT;
+    }
+    if (flags & PAGE_USER)
+    {
+        page_directory[page_directory_index] |= PAGE_USER;
     }
     page_entry_t* page_table = (page_entry_t*)(page_directory[page_directory_index] & PAGE_MASK);
     page_entry_t* page_table_virtual = (page_entry_t*)physical_to_virtual(page_table);
     
-    page_table_virtual[page_table_index] = (physical_address) | (flags & 0xFFF) | PAGE_PRESENT;
+    page_table_virtual[page_table_index] = (physical_address) | flags | PAGE_PRESENT;
 
     return MEMORY_PAGING_RESULT_OK;
 }

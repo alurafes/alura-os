@@ -17,6 +17,9 @@ extern char _kernel_physical_end;
 #define KERNEL_MAPPINGS_START 0xF8000000
 #define KERNEL_MAPPINGS_END 0xFFFFFFFF
 
+#define USER_STACK_TOP 0xBFFFE000
+#define USER_STACK_SIZE 0x1000
+
 #define ALIGN_UP_TO_SPECIFIC_PAGE(value, page_size) (value + page_size - 1) & ~(page_size - 1)
 #define ALIGN_DOWN_TO_SPECIFIC_PAGE(value, page_size) ((value) & ~(page_size - 1))
 #define ALIGN_UP(value) (ALIGN_UP_TO_SPECIFIC_PAGE(value, PAGE_SIZE))

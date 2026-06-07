@@ -6,7 +6,13 @@ extern task_manager
 extern task_manager_task_switch
 
 irq_stub_handler:
-    pushad
+    push eax
+    push ecx
+    push edx
+    push ebx
+    push ebp
+    push esi
+    push edi
     push ds
     push es
     push fs
@@ -33,6 +39,12 @@ irq_stub_handler:
     pop fs
     pop es
     pop ds
-    popad
-    add esp, 8
+    pop edi
+    pop esi
+    pop ebp
+    pop ebx
+    pop edx
+    pop ecx
+    pop eax 
+    add esp, 8 ; get rid of error code and isr index
     iret
