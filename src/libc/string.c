@@ -67,3 +67,66 @@ void* memset(void *dst, char ch, size_t size)
     }
     return dst;
 }
+
+static int is_delimiter(char c, const char *delimiter)
+{
+    while (*delimiter) {
+        if (c == *delimiter) {
+            return 1;
+        }
+        delimiter++;
+    }
+    return 0;
+}
+
+char* strtok(char *str, const char *delimiter) {
+    static char *last_pos = NULL;
+    if (str != NULL) last_pos = str;
+
+    if (last_pos == NULL || *last_pos == '\0') return NULL;
+
+    while (*last_pos && is_delimiter(*last_pos, delimiter))
+    {
+        last_pos++;
+    }
+
+    if (*last_pos == '\0') return NULL;
+    char *token_start = last_pos;
+
+    while (*last_pos)
+    {
+        if (is_delimiter(*last_pos, delimiter))
+        {
+            *last_pos = '\0';
+            last_pos++;
+            return token_start;
+        }
+        last_pos++;
+    }
+
+    return token_start;
+}
+
+
+char *strrchr(const char *str, int c)
+{
+    char *last_occurrence = NULL;
+    
+    char target = (char)c; 
+    
+    do 
+    {
+        if (*str == target) last_occurrence = (char *)str;
+    } while (*str++);
+    
+    return last_occurrence;
+}
+
+size_t strlen(const char *str)
+{
+    size_t length = 0;
+    while (str[length] != '\0') {
+        length++;
+    }
+    return length;
+}

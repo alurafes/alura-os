@@ -30,7 +30,7 @@ OBJS     := $(C_OBJS) $(ASM_OBJS)
 
 # Targets
 
-all: iso
+all: initrd iso
 
 $(BUILDDIR)/%.o: src/%.c
 	@mkdir -p $(dir $@)
@@ -46,8 +46,12 @@ link: $(OBJS)
 iso: link
 	$(GRUB) -o $(BUILDDIR)/kernel.iso $(BUILDDIR)/iso
 
-run: iso
+run: all
 	$(QEMU) -cdrom $(BUILDDIR)/kernel.iso -s -S -m 256M -d int
 
 clean:
 	rm -rf $(BUILDDIR)/*.o $(ISODIR)/kernel.elf $(BUILDDIR)/kernel.iso
+
+initrd:
+	make -C initrd
+	COPYFILE_DISABLE=1 tar --exclude='*/.*' --no-xattrs -cf $(ISODIR)/initrd.tar -C initrd/initrd .

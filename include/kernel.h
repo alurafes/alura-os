@@ -14,7 +14,7 @@
 #include "memory_paging.h"
 #include "kernel_heap.h"
 #include "task_manager.h"
-#include "timer.h"
+#include "drivers/timer.h"
 #include "vfs.h"
 #include "elf_executable.h"
 

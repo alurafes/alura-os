@@ -9,6 +9,22 @@ void memory_bitmap_lock_first_megabyte(memory_bitmap_t* bitmap)
     }
 }
 
+void memory_bitmap_lock_multiboot_modules(memory_bitmap_t* bitmap, multiboot_info_t* multiboot)
+{
+    multiboot_module_t* mods = (multiboot_module_t*)multiboot->mods_addr;
+    for (size_t i = 0; i < multiboot->mods_count; ++i)
+    {
+        multiboot_module_t* mod = &mods[i];
+        
+        size_t page = mod->mod_start / PAGE_SIZE;
+        size_t last_page = (mod->mod_end + PAGE_SIZE - 1) / PAGE_SIZE;
+        for (; page < last_page; ++page)
+        {
+            BITMAP_SET(bitmap->entries, page);
+        }
+    }
+}
+
 void memory_bitmap_lock_kernel(memory_bitmap_t* bitmap)
 {
     size_t page = (uint32_t)&_kernel_physical_start / PAGE_SIZE;
@@ -66,6 +82,7 @@ void memory_bitmap_module_init(multiboot_info_t* multiboot)
     }
 
     memory_bitmap_lock_first_megabyte(&memory_bitmap);
+    memory_bitmap_lock_multiboot_modules(&memory_bitmap, multiboot);
     memory_bitmap_lock_kernel(&memory_bitmap);
     memory_bitmap_lock_bitmap(&memory_bitmap);
     

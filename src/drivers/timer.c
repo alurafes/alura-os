@@ -1,6 +1,4 @@
-#include "timer.h"
-
-#include "print.h"
+#include "drivers/timer.h"
 
 uint64_t timer_ticks = 0;
 

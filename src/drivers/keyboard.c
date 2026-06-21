@@ -68,6 +68,7 @@ char keyboard_translate(keyboard_t* keyboard, uint8_t scancode)
 
 void keyboard_irq_handler(register_interrupt_data_t* data)
 {
+    (void)(data);
     uint8_t scancode = io_inb(0x60);
     uint8_t released = scancode & 0x80;
     uint8_t key = scancode & 0x7F;

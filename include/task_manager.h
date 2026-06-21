@@ -7,7 +7,7 @@
 #include "kernel_heap.h"
 #include "memory_paging.h"
 #include "idt.h"
-#include "timer.h"
+#include "drivers/timer.h"
 
 typedef struct resource_t resource_t;
 
@@ -33,7 +33,7 @@ typedef enum task_state_t {
     TASK_STATE_READY = 0,
     TASK_STATE_RUNNING,
     TASK_STATE_BLOCKED,
-    TASK_STATE_SLEEPING
+    TASK_STATE_TERMINATED
 } task_state_t;
 
 typedef struct task_t {

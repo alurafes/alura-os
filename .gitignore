@@ -1,5 +1,8 @@
 build/*.iso
+build/**/*.tar
 build/**/*.o
 build/**/*.elf
 .vscode
 .vscode/**
+**/*.elf
+**/.DS_Store

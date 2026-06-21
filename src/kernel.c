@@ -36,13 +36,14 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     irq_module_init();
     timer_module_init();
     task_manager_module_init();
-    ramfs_driver_init();
+
+    ramfs_driver_init((multiboot_info_t*)physical_to_virtual((void*)multiboot));
     vfs_module_init();
 
     keyboard_driver_init();
 
     printf("alura-os is loaded!\n");
-    printf("%d\n", elf_load_and_execute("/dir_a/test_file"));
+    printf("%d\n", elf_load_and_execute("/bin/hello.elf"));
 
     __asm__ volatile("sti");
 
