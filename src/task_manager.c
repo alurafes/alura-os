@@ -81,7 +81,7 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
         memory_paging_map(task->page_directory, (uint32_t)phys, USER_STACK_TOP - PAGE_SIZE, PAGE_USER | PAGE_READ_WRITE);
     }
 
-    task->task_is_user = task_is_user;
+    task->task_is_user = task_is_user;  
 
     uint32_t* task_stack_top = (uint32_t*)task->stack_top;
 
@@ -114,6 +114,59 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
     *--task_stack_top = data_selector; // gs
 
     task->task_esp = (uint32_t)task_stack_top;
+
+    if (enqueue) task_manager_enqueue_task(task_manager, task->task_queue_level, task);
+
+    return task;
+}
+
+task_t* task_manager_task_copy(task_manager_t* task_manager, task_t* parent, uint8_t enqueue)
+{
+    task_t* task = (task_t*)kernel_heap_calloc(sizeof(task_t)); 
+
+    task->task_id = task_id++;
+    task->next = NULL;
+
+    task->task_state = TASK_STATE_READY;
+    task->task_time_slice = TASK_MANAGER_DEFAULT_TIME_SLICE;
+    task->task_queue_level = 0; // new tasks with the highest queue level
+    task->task_is_user = parent->task_is_user;
+
+    memory_paging_create_page_directory(&task->page_directory); // todo: panic!!
+    task->task_cr3 = (uint32_t)virtual_to_physical(task->page_directory);
+
+    memory_paging_copy_mapped_memory(parent->page_directory, task->page_directory); // todo: error checking
+
+    uint32_t* kernel_stack = kernel_heap_calloc_into_page_directory(PAGE_SIZE, task->page_directory, PAGE_READ_WRITE);
+    task->stack_base = (uint32_t)kernel_stack;
+    task->stack_top  = (uint32_t)kernel_stack + PAGE_SIZE;
+
+
+    uintptr_t phys = memory_paging_virtual_to_physical(
+        task->page_directory,
+        task->stack_base);
+
+    printf("child stack virt=%x phys=%x\n",
+        task->stack_base,
+        phys);
+    // assuming parents page directory is active
+    memory_paging_map(parent->page_directory, memory_paging_virtual_to_physical(task->page_directory, task->stack_base), KERNEL_BOUNCE_PAGE, PAGE_READ_WRITE);
+    
+    asm volatile("invlpg (%0)" : : "r"(KERNEL_BOUNCE_PAGE) : "memory");
+
+    printf("before copy:\n");
+    printf("bounce=%x\n", *(uint32_t*)KERNEL_BOUNCE_PAGE);
+    printf("parent=%x\n", *(uint32_t*)parent->stack_base);
+    
+    memcpy((void*)KERNEL_BOUNCE_PAGE, (void*)parent->stack_base, PAGE_SIZE);
+
+    printf("after copy:\n");
+    printf("bounce=%x\n", *(uint32_t*)KERNEL_BOUNCE_PAGE);
+
+    uint32_t esp_offset = parent->task_esp - parent->stack_base;
+    task->task_esp = task->stack_base + esp_offset;
+
+    memory_paging_unmap(parent->page_directory, KERNEL_BOUNCE_PAGE);
 
     if (enqueue) task_manager_enqueue_task(task_manager, task->task_queue_level, task);
 

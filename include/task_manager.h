@@ -74,6 +74,7 @@ extern task_manager_t task_manager;
 void task_manager_module_init();
 
 task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(void), uint8_t task_is_user, uint8_t enqueue);
+task_t* task_manager_task_copy(task_manager_t* task_manager, task_t* parent, uint8_t enqueue);
 void task_manager_schedule(task_manager_t* task_manager);
 task_t* task_manager_create_idle_task(task_manager_t* task_manager);
 task_t* task_manager_pick_task(task_manager_t* task_manager);

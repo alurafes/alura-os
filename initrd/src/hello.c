@@ -1,11 +1,11 @@
-static inline int syscall1(int n, int a1)
+static inline int syscall0(int n)
 {
     int ret;
 
     asm volatile(
         "int $0x80"
         : "=a"(ret)
-        : "a"(n), "b"(a1)
+        : "a"(n)
         : "ecx", "edx", "memory"
     );
 
@@ -14,8 +14,9 @@ static inline int syscall1(int n, int a1)
 
 void _start(void)
 {
+    syscall0(3);
     while (1)
     {
-        syscall1(4, (int)"Hello from ELF!\n");
+        
     }
 }

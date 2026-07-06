@@ -46,10 +46,13 @@ int32_t syscall_read(task_t* task, uint32_t resource_index, void* buffer, size_t
     return read_bytes;
 }
 
-int32_t syscall_print(task_t* task, const char* message)
+int32_t syscall_fork(register_interrupt_data_t* data, task_t* task)
 {
-    printf("<task %d>: %s", task->task_id, message);
-    return 0;
+    task_t* child_task = task_manager_task_copy(&task_manager, task, 1);
+
+    printf("Created new task: %d\n", child_task->task_id);
+
+    return child_task->task_id;
 }
 
 void syscall_handler(register_interrupt_data_t* data)
@@ -72,9 +75,9 @@ void syscall_handler(register_interrupt_data_t* data)
             data->eax = syscall_read(task, data->ebx, (void*)data->ecx, data->edx);
             break;
         }
-        case 4:
+        case SYSCALL_FORK:
         {
-            data->eax = syscall_print(task, (const char*)data->ebx);
+            data->eax = syscall_fork(data, task);
             break;
         }
     }

@@ -1,6 +1,8 @@
 #include "memory_paging.h"
 #include "memory.h"
 
+#include "libc/string.h"
+
 void memory_paging_reset_entry(page_entry_t* entry)
 {
     for (uint32_t i = 0; i < KERNEL_PDE_ENTRIES; ++i)
@@ -42,6 +44,41 @@ void memory_paging_module_init()
     memory_paging_disable_pse();
 }
 
+// assuming src is currently active
+memory_paging_result_t memory_paging_copy_mapped_memory(page_entry_t* src, page_entry_t* dst)
+{
+    if (src == dst) return MEMORY_PAGING_RESULT_OK;
+    if (src == NULL || dst == NULL) return MEMORY_PAGING_RESULT_BAD_PARAMETER;
+
+    for (uint32_t pde = 0; pde < KERNEL_PDE_ENTRIES; ++pde)
+    {
+        uintptr_t virtual_address = pde << 22;
+        if (virtual_address >= KERNEL_VIRTUAL_SPACE_START) break;
+        if (!(src[pde] & PAGE_PRESENT)) continue;
+        page_entry_t* page_table = (page_entry_t*)(src[pde] & PAGE_MASK);
+        page_entry_t* page_table_virtual = (page_entry_t*)physical_to_virtual(page_table);
+
+        for (uint32_t pte = 0; pte < KERNEL_PDE_ENTRIES; ++pte)
+        {
+            if (!(page_table_virtual[pte] & PAGE_PRESENT)) continue;
+
+            uintptr_t virtual_addr = (pde << 22) | (pte << 12);
+
+            void* phys_dst = memory_bitmap_allocate();
+            memory_paging_map(src, (uintptr_t)phys_dst, KERNEL_BOUNCE_PAGE, PAGE_READ_WRITE); // todo: error check
+
+            memcpy((void*)KERNEL_BOUNCE_PAGE, (void*)virtual_addr, PAGE_SIZE);
+            memory_paging_unmap(src, KERNEL_BOUNCE_PAGE);
+
+            uint32_t flags = page_table_virtual[pte] & 0xFFF;
+            memory_paging_map(dst, (uintptr_t)phys_dst, virtual_addr, flags); 
+        }
+
+    }
+
+    return MEMORY_PAGING_RESULT_OK;
+}
+
 memory_paging_result_t memory_paging_map(page_entry_t* page_directory, uintptr_t physical_address, uintptr_t virtual_address, uint32_t flags)
 {
     size_t page_directory_index = (virtual_address >> 22) & 0x3FF;
@@ -65,6 +102,22 @@ memory_paging_result_t memory_paging_map(page_entry_t* page_directory, uintptr_t
     page_entry_t* page_table_virtual = (page_entry_t*)physical_to_virtual(page_table);
     
     page_table_virtual[page_table_index] = (physical_address) | flags | PAGE_PRESENT;
+
+    return MEMORY_PAGING_RESULT_OK;
+}
+
+memory_paging_result_t memory_paging_unmap(page_entry_t* page_directory, uintptr_t virtual_address)
+{
+    size_t page_directory_index = (virtual_address >> 22) & 0x3FF;
+    size_t page_table_index = (virtual_address >> 12) & 0x3FF;
+    
+    uint32_t page_table_present = page_directory[page_directory_index] & PAGE_PRESENT;
+    if (page_table_present)
+    {
+        page_entry_t* page_table = (page_entry_t*)(page_directory[page_directory_index] & PAGE_MASK);
+        page_entry_t* page_table_virtual = (page_entry_t*)physical_to_virtual(page_table);
+        page_table_virtual[page_table_index] = 0;
+    }
 
     return MEMORY_PAGING_RESULT_OK;
 }
@@ -124,4 +177,26 @@ void memory_paging_free_page_directory(page_entry_t* page_directory)
         memory_paging_free_page_table(page_table);
         memory_bitmap_free(page_table_physical);
     }
+}
+
+uintptr_t memory_paging_virtual_to_physical(page_entry_t *page_directory, uintptr_t virtual_address)
+{
+    uint32_t pde_index = virtual_address >> 22;
+    uint32_t pte_index = (virtual_address >> 12) & 0x3FF;
+
+    uint32_t pde = page_directory[pde_index];
+
+    if (!(pde & PAGE_PRESENT)) return 0;
+
+    uintptr_t pt_phys = pde & PAGE_MASK;
+
+    page_entry_t *page_table = (page_entry_t *)physical_to_virtual((void *)pt_phys);
+    uint32_t pte = page_table[pte_index];
+
+    if (!(pte & PAGE_PRESENT)) return 0;
+
+    uintptr_t page_physical = pte & PAGE_MASK;
+    uintptr_t offset = virtual_address & 0xFFF;
+
+    return page_physical + offset;
 }
