@@ -43,7 +43,7 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     keyboard_driver_init();
 
     printf("alura-os is loaded!\n");
-    printf("%d\n", elf_load_and_execute("/bin/hello.elf"));
+    printf("elf run return: %d\n", elf_load_and_execute("/bin/hello.elf"));
 
     __asm__ volatile("sti");
 

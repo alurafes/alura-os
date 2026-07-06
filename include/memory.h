@@ -17,10 +17,10 @@ extern char _kernel_physical_end;
 #define KERNEL_MAPPINGS_START 0xF8000000
 #define KERNEL_MAPPINGS_END 0xFFFFFFFF
 
-#define KERNEL_BOUNCE_PAGE 0xFFC00000
+#define KERNEL_BOUNCE_PAGE 0xFFE00000
 
 #define USER_STACK_TOP 0xBFFFE000
-#define USER_STACK_SIZE 0x1000
+#define KERNEL_STACK_TOP 0xD0000000
 
 #define ALIGN_UP_TO_SPECIFIC_PAGE(value, page_size) (value + page_size - 1) & ~(page_size - 1)
 #define ALIGN_DOWN_TO_SPECIFIC_PAGE(value, page_size) ((value) & ~(page_size - 1))

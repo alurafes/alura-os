@@ -55,6 +55,12 @@ int32_t syscall_fork(register_interrupt_data_t* data, task_t* task)
     return child_task->task_id;
 }
 
+int32_t syscall_print(task_t* task, const char* message)
+{
+    printf("<task %d>: %s", task->task_id, message);
+    return 0;
+}
+
 void syscall_handler(register_interrupt_data_t* data)
 {
     task_t* task = task_manager.task_current;
@@ -78,6 +84,11 @@ void syscall_handler(register_interrupt_data_t* data)
         case SYSCALL_FORK:
         {
             data->eax = syscall_fork(data, task);
+            break;
+        }
+        case 4:
+        {
+            data->eax = syscall_print(task, (const char*)data->ebx);
             break;
         }
     }

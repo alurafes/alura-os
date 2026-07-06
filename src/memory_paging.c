@@ -2,6 +2,7 @@
 #include "memory.h"
 
 #include "libc/string.h"
+#include "print.h"
 
 void memory_paging_reset_entry(page_entry_t* entry)
 {
@@ -103,6 +104,8 @@ memory_paging_result_t memory_paging_map(page_entry_t* page_directory, uintptr_t
     
     page_table_virtual[page_table_index] = (physical_address) | flags | PAGE_PRESENT;
 
+    asm volatile("invlpg (%0)" : : "r"(virtual_address) : "memory");
+
     return MEMORY_PAGING_RESULT_OK;
 }
 
@@ -118,6 +121,8 @@ memory_paging_result_t memory_paging_unmap(page_entry_t* page_directory, uintptr
         page_entry_t* page_table_virtual = (page_entry_t*)physical_to_virtual(page_table);
         page_table_virtual[page_table_index] = 0;
     }
+
+    asm volatile("invlpg (%0)" : : "r"(virtual_address) : "memory");
 
     return MEMORY_PAGING_RESULT_OK;
 }
@@ -181,7 +186,7 @@ void memory_paging_free_page_directory(page_entry_t* page_directory)
 
 uintptr_t memory_paging_virtual_to_physical(page_entry_t *page_directory, uintptr_t virtual_address)
 {
-    uint32_t pde_index = virtual_address >> 22;
+    uint32_t pde_index = (virtual_address >> 22) & 0x3FF;
     uint32_t pte_index = (virtual_address >> 12) & 0x3FF;
 
     uint32_t pde = page_directory[pde_index];
