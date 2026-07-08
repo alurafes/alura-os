@@ -70,7 +70,9 @@ elf_result_t elf_load_and_execute(const char *path)
                 vfs_release_node(elf_node);
                 return ELF_RESULT_ALLOCATION_ERROR;
             }
-            memory_paging_result_t paging_result = memory_paging_map(task->page_directory, (uint32_t)memory, address, PAGE_PRESENT | (task->task_is_user ? PAGE_USER : 0) | PAGE_READ_WRITE);
+            page_entry_t* task_page_directory = bounce_alloc(task->task_cr3);
+            memory_paging_result_t paging_result = memory_paging_map(task_page_directory, (uint32_t)memory, address, PAGE_PRESENT | (task->task_is_user ? PAGE_USER : 0) | PAGE_READ_WRITE);
+            bounce_free((uintptr_t)task_page_directory);
             if (paging_result != MEMORY_PAGING_RESULT_OK)
             {
                 memory_bitmap_free(memory);
@@ -79,7 +81,7 @@ elf_result_t elf_load_and_execute(const char *path)
             }
         }
 
-        memory_paging_set(task->page_directory);
+        memory_paging_set((page_entry_t*)task->task_cr3);
 
         result = vfs_read(&resource, program_header.p_offset, (void*)program_header.p_vaddr, program_header.p_memsz, &read_bytes);
         if (result != RESOURCE_RESULT_OK) 
@@ -91,7 +93,7 @@ elf_result_t elf_load_and_execute(const char *path)
 
         memset((void*)(program_header.p_vaddr + program_header.p_filesz), 0, program_header.p_memsz - program_header.p_filesz);
 
-        memory_paging_set(kernel_page_directory);
+        memory_paging_set(kernel_page_directory_phys);
     }
 
     return ELF_RESULT_OK;

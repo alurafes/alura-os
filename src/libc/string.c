@@ -14,7 +14,7 @@ int strcmp(const char* s1, const char* s2)
     return 0;
 }
 
-char* strcpy(char *dst, const char *src)
+char* strcpy(char* dst, const char* src)
 {
     char* output = dst;
     while (*src != '\0')
@@ -27,7 +27,7 @@ char* strcpy(char *dst, const char *src)
     return dst;
 }
 
-char* strncpy(char *dst, const char *src, size_t n)
+char* strncpy(char* dst, const char* src, size_t n)
 {
     char* ret = dst;
 
@@ -48,8 +48,8 @@ char* strncpy(char *dst, const char *src, size_t n)
 
 void* memcpy(void* dst, const void* src, size_t n)
 {
-    unsigned char *d = (unsigned char *)dst;
-    const unsigned char *s = (const unsigned char *)src;
+    unsigned char* d = (unsigned char *)dst;
+    const unsigned char* s = (const unsigned char *)src;
 
     while (n--)
     {
@@ -59,7 +59,7 @@ void* memcpy(void* dst, const void* src, size_t n)
     return dst;
 }
 
-void* memset(void *dst, char ch, size_t size)
+void* memset(void* dst, char ch, size_t size)
 {
     char* ptr = (char*)dst;
     while (size--) {
@@ -68,7 +68,7 @@ void* memset(void *dst, char ch, size_t size)
     return dst;
 }
 
-static int is_delimiter(char c, const char *delimiter)
+static int is_delimiter(char c, const char* delimiter)
 {
     while (*delimiter) {
         if (c == *delimiter) {
@@ -79,8 +79,8 @@ static int is_delimiter(char c, const char *delimiter)
     return 0;
 }
 
-char* strtok(char *str, const char *delimiter) {
-    static char *last_pos = NULL;
+char* strtok(char* str, const char* delimiter) {
+    static char* last_pos = NULL;
     if (str != NULL) last_pos = str;
 
     if (last_pos == NULL || *last_pos == '\0') return NULL;
@@ -91,7 +91,7 @@ char* strtok(char *str, const char *delimiter) {
     }
 
     if (*last_pos == '\0') return NULL;
-    char *token_start = last_pos;
+    char* token_start = last_pos;
 
     while (*last_pos)
     {
@@ -108,9 +108,9 @@ char* strtok(char *str, const char *delimiter) {
 }
 
 
-char *strrchr(const char *str, int c)
+char* strrchr(const char* str, int c)
 {
-    char *last_occurrence = NULL;
+    char* last_occurrence = NULL;
     
     char target = (char)c; 
     
@@ -122,7 +122,7 @@ char *strrchr(const char *str, int c)
     return last_occurrence;
 }
 
-size_t strlen(const char *str)
+size_t strlen(const char* str)
 {
     size_t length = 0;
     while (str[length] != '\0') {

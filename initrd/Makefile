@@ -1,5 +1,5 @@
-CC      := i686-elf-gcc
-LD      := i686-elf-ld
+CC      := gcc
+LD      := ld
 
 CFLAGS  := -m32 -ffreestanding -fno-pic -fno-pie -nostartfiles -nodefaultlibs -nostdlib
 LDFLAGS := -m elf_i386 -n -T linker.ld

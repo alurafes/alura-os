@@ -57,37 +57,21 @@ task_manager_result_t task_manager_remove_task_from_queue(task_manager_t* task_m
     return TASK_MANAGER_RESULT_QUEUE_TASK_NOT_FOUND;
 }
 
-task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(void), uint8_t task_is_user, uint8_t enqueue)
+task_manager_result_t task_manager_prepare_new_stack(page_entry_t* task_page_directory, uint8_t task_is_user, uint32_t eip, uint32_t* out_esp)
 {
-    task_t* task = (task_t*)kernel_heap_calloc(sizeof(task_t)); 
-
-    task->task_id = task_id++;
-    task->next = NULL;
-
-    task->task_state = TASK_STATE_READY;
-    task->task_time_slice = TASK_MANAGER_DEFAULT_TIME_SLICE;
-    task->task_queue_level = 0; // new tasks with the highest queue level
-
-    memory_paging_create_page_directory(&task->page_directory); // todo: panic!!
-    task->task_cr3 = (uint32_t)virtual_to_physical(task->page_directory);
-
     void* kernel_stack_phys = memory_bitmap_allocate();
-    memory_paging_map(task->page_directory, (uint32_t)kernel_stack_phys, KERNEL_STACK_TOP - PAGE_SIZE, PAGE_READ_WRITE);
 
-    memory_paging_map(kernel_page_directory, (uint32_t)kernel_stack_phys, KERNEL_BOUNCE_PAGE, PAGE_READ_WRITE);
+    memory_paging_map(task_page_directory, (uint32_t)kernel_stack_phys, KERNEL_STACK_TOP - PAGE_SIZE, PAGE_READ_WRITE);
 
-    task->stack_base = (uint32_t)KERNEL_STACK_TOP - PAGE_SIZE;
-    task->stack_top  = (uint32_t)KERNEL_STACK_TOP;
- 
+    uintptr_t task_stack_base = (uintptr_t)bounce_alloc((uintptr_t)kernel_stack_phys);
+
     if (task_is_user)
     {
         void* user_stack_phys = memory_bitmap_allocate();
-        memory_paging_map(task->page_directory, (uint32_t)user_stack_phys, USER_STACK_TOP - PAGE_SIZE, PAGE_USER | PAGE_READ_WRITE);
+        memory_paging_map(task_page_directory, (uint32_t)user_stack_phys, USER_STACK_TOP - PAGE_SIZE, PAGE_USER | PAGE_READ_WRITE);
     }
 
-    task->task_is_user = task_is_user;
-
-    uint32_t* task_stack_top = (uint32_t*)(KERNEL_BOUNCE_PAGE + PAGE_SIZE);
+    uint32_t* task_stack_top = (uint32_t*)(task_stack_base + PAGE_SIZE);
 
     if (task_is_user)
     {
@@ -97,7 +81,7 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
 
     *--task_stack_top = 0x202; // eflags
     *--task_stack_top = task_is_user ? TASK_MANAGER_USER_CODE_SELECTOR : TASK_MANAGER_KERNEL_CODE_SELECTOR; // cs
-    *--task_stack_top = (uint32_t)entry; // eip
+    *--task_stack_top = eip;
 
     *--task_stack_top = 0; // irq number
     *--task_stack_top = 0; // error code
@@ -117,9 +101,38 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
     *--task_stack_top = data_selector; // fs
     *--task_stack_top = data_selector; // gs
 
-    task->task_esp = task->stack_top - (KERNEL_BOUNCE_PAGE + PAGE_SIZE - (uint32_t)task_stack_top);
+    *out_esp = KERNEL_STACK_TOP - (task_stack_base + PAGE_SIZE - (uint32_t)task_stack_top);
+    bounce_free(task_stack_base);
 
-    memory_paging_unmap(kernel_page_directory, KERNEL_BOUNCE_PAGE);
+    return TASK_MANAGER_RESULT_OK;
+}
+
+task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(void), uint8_t task_is_user, uint8_t enqueue)
+{
+    task_t* task = (task_t*)kernel_heap_calloc(sizeof(task_t)); 
+
+    task->task_id = task_id++;
+    task->next = NULL;
+
+    task->task_state = TASK_STATE_READY;
+    task->task_time_slice = TASK_MANAGER_DEFAULT_TIME_SLICE;
+    task->task_queue_level = 0; // new tasks with the highest queue level
+
+    page_entry_t* current_page_directory = (page_entry_t*)PAGE_DIRECTORY_VADDR;
+    memory_paging_create_page_directory(&task->task_cr3); // todo: panic!!
+    task->stack_base = (uint32_t)KERNEL_STACK_TOP - PAGE_SIZE;
+    task->stack_top  = (uint32_t)KERNEL_STACK_TOP;
+    task->task_is_user = task_is_user;
+    
+    page_entry_t* task_page_directory = bounce_alloc(task->task_cr3);
+
+    task_manager_result_t result = task_manager_prepare_new_stack(task_page_directory, task_is_user, (uint32_t)entry, &task->task_esp);
+    if (result != TASK_MANAGER_RESULT_OK)
+    {
+        // todo
+    }
+
+    bounce_free((uintptr_t)task_page_directory);
 
     if (enqueue) task_manager_enqueue_task(task_manager, task->task_queue_level, task);
 
@@ -137,26 +150,27 @@ task_t* task_manager_task_copy(task_manager_t* task_manager, task_t* parent, uin
     task->task_queue_level = 0; // new tasks with the highest queue level
     task->task_is_user = parent->task_is_user;
 
-    memory_paging_create_page_directory(&task->page_directory); // todo: panic!!
-    task->task_cr3 = (uint32_t)virtual_to_physical(task->page_directory);
+    memory_paging_create_page_directory(&task->task_cr3); // todo: panic!!
+    page_entry_t* task_page_directory = bounce_alloc(task->task_cr3);
 
     void* kernel_stack_phys = memory_bitmap_allocate();
-    memory_paging_map(task->page_directory, (uint32_t)kernel_stack_phys, KERNEL_STACK_TOP - PAGE_SIZE, PAGE_READ_WRITE);
+    memory_paging_map(task_page_directory, (uint32_t)kernel_stack_phys, KERNEL_STACK_TOP - PAGE_SIZE, PAGE_READ_WRITE);
     task->stack_base = (uint32_t)KERNEL_STACK_TOP - PAGE_SIZE;
     task->stack_top  = (uint32_t)KERNEL_STACK_TOP;
 
-    memory_paging_copy_mapped_memory(parent->page_directory, task->page_directory); // todo: error checking
+    memory_paging_copy_mapped_memory(task_page_directory); // todo: error checking
 
-    memory_paging_map(parent->page_directory, (uintptr_t)kernel_stack_phys, KERNEL_BOUNCE_PAGE, PAGE_READ_WRITE);
-    memcpy((void*)KERNEL_BOUNCE_PAGE, (void*)parent->stack_base, PAGE_SIZE);   
+    void* kernel_stack = bounce_alloc((uintptr_t)kernel_stack_phys);
+    memcpy(kernel_stack, (void*)parent->stack_base, PAGE_SIZE);   
 
     uint32_t esp_offset = parent->task_esp - parent->stack_base;
     task->task_esp = task->stack_base + esp_offset;
 
-    register_interrupt_data_t* data = (register_interrupt_data_t*)(KERNEL_BOUNCE_PAGE + esp_offset);
+    register_interrupt_data_t* data = (register_interrupt_data_t*)(kernel_stack + esp_offset);
     data->eax = 0;
 
-    memory_paging_unmap(parent->page_directory, KERNEL_BOUNCE_PAGE);
+    bounce_free((uintptr_t)kernel_stack);
+    bounce_free((uintptr_t)task_page_directory);
 
     if (enqueue) task_manager_enqueue_task(task_manager, task->task_queue_level, task);
 

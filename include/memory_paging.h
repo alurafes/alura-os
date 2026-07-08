@@ -17,6 +17,9 @@
 
 typedef uint32_t page_entry_t;
 
+#define PAGE_DIRECTORY_VADDR 0xFFFFF000
+#define PAGE_TABLE_VADDR(pd) ((page_entry_t*)(0xFFC00000 + ((pd) << 12)))
+
 typedef enum memory_paging_result_t {
     MEMORY_PAGING_RESULT_OK,
     MEMORY_PAGING_RESULT_ALLOCATION_ERROR,
@@ -24,14 +27,20 @@ typedef enum memory_paging_result_t {
 } memory_paging_result_t;
 
 extern page_entry_t* kernel_page_directory;
+extern page_entry_t* kernel_page_directory_phys;
 void memory_paging_module_init();
 
-void memory_paging_set(page_entry_t* page_directory);
+void* bounce_alloc(uintptr_t physical_address);
+void bounce_free(uintptr_t virtual_address);
+
+void memory_paging_set(page_entry_t* page_directory_physical);
 memory_paging_result_t memory_paging_create_kernel_page_directory();
-memory_paging_result_t memory_paging_create_page_directory(page_entry_t** result);
-memory_paging_result_t memory_paging_copy_mapped_memory(page_entry_t* src, page_entry_t* dst);
+memory_paging_result_t memory_paging_create_page_directory(uint32_t* result);
+memory_paging_result_t memory_paging_copy_mapped_memory(page_entry_t* dst);
 memory_paging_result_t memory_paging_map(page_entry_t* page_directory, uint32_t physical_address, uint32_t virtual_address, uint32_t flags);
 memory_paging_result_t memory_paging_unmap(page_entry_t* page_directory, uintptr_t virtual_address);
-uintptr_t memory_paging_virtual_to_physical(page_entry_t *page_directory, uintptr_t virtual_address);
+memory_paging_result_t memory_paging_map_current(uint32_t physical_address, uint32_t virtual_address, uint32_t flags);
+memory_paging_result_t memory_paging_unmap_current(uintptr_t virtual_address);
+uintptr_t memory_paging_virtual_to_physical(page_entry_t* page_directory, uintptr_t virtual_address);
 
 #endif // ALURA_MEMORY_PAGING_H
