@@ -117,6 +117,7 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
     task->task_state = TASK_STATE_READY;
     task->task_time_slice = TASK_MANAGER_DEFAULT_TIME_SLICE;
     task->task_queue_level = 0; // new tasks with the highest queue level
+    task->task_init_eip = (uint32_t)entry;
 
     page_entry_t* current_page_directory = (page_entry_t*)PAGE_DIRECTORY_VADDR;
     memory_paging_create_page_directory(&task->task_cr3); // todo: panic!!
@@ -149,6 +150,7 @@ task_t* task_manager_task_copy(task_manager_t* task_manager, task_t* parent, uin
     task->task_time_slice = TASK_MANAGER_DEFAULT_TIME_SLICE;
     task->task_queue_level = 0; // new tasks with the highest queue level
     task->task_is_user = parent->task_is_user;
+    task->task_init_eip = parent->task_init_eip;
 
     memory_paging_create_page_directory(&task->task_cr3); // todo: panic!!
     page_entry_t* task_page_directory = bounce_alloc(task->task_cr3);
@@ -203,6 +205,7 @@ void task_manager_module_init()
 
 void task_manager_schedule(task_manager_t* task_manager)
 {
+    memory_paging_destroy_queued();
     if (timer_get_ticks() - task_manager->last_priority_boost_at_ticks >= TASK_MANAGER_PRIORITY_BOOST_INTERVAL)
     {
         task_manager_boost_priority_of_all_tasks(task_manager);

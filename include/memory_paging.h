@@ -41,6 +41,10 @@ memory_paging_result_t memory_paging_map(page_entry_t* page_directory, uint32_t 
 memory_paging_result_t memory_paging_unmap(page_entry_t* page_directory, uintptr_t virtual_address);
 memory_paging_result_t memory_paging_map_current(uint32_t physical_address, uint32_t virtual_address, uint32_t flags);
 memory_paging_result_t memory_paging_unmap_current(uintptr_t virtual_address);
+memory_paging_result_t memory_paging_queue_to_destroy(page_entry_t* page_directory);
+void memory_paging_destroy_queued();
+void memory_paging_free_page_directory(page_entry_t* page_directory);
 uintptr_t memory_paging_virtual_to_physical(page_entry_t* page_directory, uintptr_t virtual_address);
+page_entry_t* memory_paging_get_current_page_directory_physical();
 
 #endif // ALURA_MEMORY_PAGING_H

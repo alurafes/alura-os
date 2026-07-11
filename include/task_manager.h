@@ -55,6 +55,7 @@ typedef struct task_t {
     // anything below i wont add into the asm file
 
     resource_t* resources[TASK_MAX_RESOURCES];
+    uint32_t task_init_eip;
 } task_t;
 
 typedef struct task_manager_t {

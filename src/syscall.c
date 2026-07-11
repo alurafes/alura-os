@@ -1,6 +1,7 @@
 #include "syscall.h"
 #include "idt.h"
 #include "vfs.h"
+#include "elf_executable.h"
 
 #include "print.h"
 
@@ -55,6 +56,12 @@ int32_t syscall_fork(register_interrupt_data_t* data, task_t* task)
     return child_task->task_id;
 }
 
+int32_t syscall_execve(task_t* task, const char* path)
+{
+    elf_load_into_task(task, path);
+    return 0;
+}
+
 int32_t syscall_print(task_t* task, const char* message)
 {
     printf("<task %d>: %s", task->task_id, message);
@@ -86,7 +93,14 @@ void syscall_handler(register_interrupt_data_t* data)
             data->eax = syscall_fork(data, task);
             break;
         }
-        case 4:
+        case SYSCALL_EXECVE:
+        {
+            syscall_execve(task, (const char*)data->ebx);
+            data->useresp = task->task_esp;
+            data->eip = task->task_init_eip;
+            break;
+        }
+        case 10:
         {
             data->eax = syscall_print(task, (const char*)data->ebx);
             break;

@@ -1,5 +1,8 @@
+%include "task_manager.inc"
+
 global isr_stub_handler
 extern isr_handler
+extern task_manager
 isr_stub_handler:
     push eax
     push ecx
@@ -23,6 +26,14 @@ isr_stub_handler:
     call isr_handler
     add esp, 4
 
+    mov edi, [task_manager + task_manager_t.task_current]
+    mov eax, [edi + task_t.task_cr3]
+    mov ebx, cr3
+    cmp eax, ebx
+    je .isr_stub_handler_finish
+    mov cr3, eax
+
+.isr_stub_handler_finish:
     pop gs
     pop fs
     pop es

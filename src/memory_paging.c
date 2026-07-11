@@ -2,6 +2,7 @@
 #include "memory.h"
 
 #include "libc/string.h"
+#include "kernel_heap.h"
 #include "print.h"
 
 // bounce pages
@@ -282,6 +283,7 @@ memory_paging_result_t memory_paging_create_page_directory(uint32_t* result)
     memory_paging_reset_entry(new_page_directory);
 
     // copy kernel PD mappings so i don't have to initialize them
+    page_entry_t* current = (page_entry_t*)PAGE_DIRECTORY_VADDR;
     for (uint32_t i = KERNEL_PDE_START; i < KERNEL_PDE_ENTRIES; i++)
     {
         new_page_directory[i] = kernel_page_directory[i];
@@ -296,31 +298,31 @@ memory_paging_result_t memory_paging_create_page_directory(uint32_t* result)
     return MEMORY_PAGING_RESULT_OK;
 }
 
-// void memory_paging_free_page_table(page_entry_t* page_table)
-// {
-//     for (size_t page_table_entry = 0; page_table_entry < KERNEL_PDE_ENTRIES; ++page_table_entry)
-//     {
-//         if (!(page_table[page_table_entry] & PAGE_PRESENT)) continue;
-//         void* page_table_entry_physical = (void*)(page_table[page_table_entry] & PAGE_MASK);
-//         memory_bitmap_free(page_table_entry_physical);
-//     }
-// }
+void memory_paging_free_page_table(page_entry_t* page_table)
+{
+    for (size_t page_table_entry = 0; page_table_entry < KERNEL_PDE_ENTRIES; ++page_table_entry)
+    {
+        if (!(page_table[page_table_entry] & PAGE_PRESENT)) continue;
+        void* page_table_entry_physical = (void*)(page_table[page_table_entry] & PAGE_MASK);
+        memory_bitmap_free(page_table_entry_physical);
+    }
+}
 
-// void memory_paging_free_page_directory(page_entry_t* page_directory)
-// {
-//     if (!page_directory) return;
+void memory_paging_free_page_directory(page_entry_t* page_directory)
+{
+    if (!page_directory) return;
 
-//     // Kernel PDEs are shared
-//     for (uint32_t page_directory_entry = 0; page_directory_entry < KERNEL_PDE_START; ++page_directory_entry)
-//     {
-//         if (!(page_directory[page_directory_entry] & PAGE_PRESENT)) continue;
-//         void* page_table_physical = (void*)(page_directory[page_directory_entry]);
-//         page_entry_t* page_table = (page_entry_t*)physical_to_virtual(page_table_physical);
-
-//         memory_paging_free_page_table(page_table);
-//         memory_bitmap_free(page_table_physical);
-//     }
-// }
+    // Kernel PDEs are shared
+    for (uint32_t page_directory_entry = 0; page_directory_entry < KERNEL_PDE_START; ++page_directory_entry)
+    {
+        if (!(page_directory[page_directory_entry] & PAGE_PRESENT)) continue;
+        void* page_table_physical = (void*)(page_directory[page_directory_entry]);
+        page_entry_t* page_table = (page_entry_t*)bounce_alloc((uintptr_t)page_table_physical);
+        memory_paging_free_page_table(page_table);
+        memory_bitmap_free(page_table_physical);
+        bounce_free((uintptr_t)page_table);
+    }
+}
 
 uintptr_t memory_paging_virtual_to_physical(page_entry_t* page_directory_phys, uintptr_t virtual_address)
 {
@@ -348,4 +350,50 @@ uintptr_t memory_paging_virtual_to_physical(page_entry_t* page_directory_phys, u
     bounce_free((uintptr_t)page_table);
 
     return page_physical + offset;
+}
+
+page_entry_t* memory_paging_get_current_page_directory_physical()
+{
+    uint32_t cr3 = 0;
+    __asm__ volatile("mov %%cr3, %0" : "=r"(cr3));
+    return (page_entry_t*)cr3; 
+}
+
+typedef struct page_directory_node_t {
+    page_entry_t* page_directory;
+    struct page_directory_node_t* next;
+} page_directory_node_t;
+
+page_directory_node_t* page_directories_to_destroy = NULL;
+page_directory_node_t* page_directories_to_destroy_tail = NULL;
+
+memory_paging_result_t memory_paging_queue_to_destroy(page_entry_t* page_directory)
+{
+    if (page_directory == kernel_page_directory_phys) return MEMORY_PAGING_RESULT_OK;
+    page_directory_node_t* node = (page_directory_node_t*)kernel_heap_malloc(sizeof(page_directory_node_t));
+    node->next = NULL;
+    node->page_directory = page_directory;
+
+    if (page_directories_to_destroy == NULL) 
+    {
+        page_directories_to_destroy = node;
+        page_directories_to_destroy_tail = node;
+        return MEMORY_PAGING_RESULT_OK;
+    }
+    page_directories_to_destroy_tail->next = node;
+    page_directories_to_destroy_tail = node;
+    return MEMORY_PAGING_RESULT_OK;
+}
+
+void memory_paging_destroy_queued()
+{
+    page_directory_node_t* head = page_directories_to_destroy;
+    while (head != NULL)
+    {
+        page_entry_t* page_directory = (page_entry_t*)bounce_alloc((uintptr_t)head->page_directory);
+        memory_paging_free_page_directory(page_directory);
+        bounce_free((uintptr_t)page_directory);
+        head = head->next;
+        kernel_heap_free(head);
+    }
 }

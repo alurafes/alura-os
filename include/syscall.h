@@ -11,6 +11,7 @@
 #define SYSCALL_CLOSE 1
 #define SYSCALL_READ 2
 #define SYSCALL_FORK 3
+#define SYSCALL_EXECVE 4
 
 void syscall_handler(register_interrupt_data_t* data);
 
