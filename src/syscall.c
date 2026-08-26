@@ -50,15 +50,21 @@ int32_t syscall_read(task_t* task, uint32_t resource_index, void* buffer, size_t
 int32_t syscall_fork(register_interrupt_data_t* data, task_t* task)
 {
     task_t* child_task = task_manager_task_copy(&task_manager, task, 1);
-
-    printf("Created new task: %d\n", child_task->task_id);
-
+    child_task->parent = task;
+    task_manager_add_child_to_task(task, child_task);
     return child_task->task_id;
 }
 
 int32_t syscall_execve(task_t* task, const char* path)
 {
     elf_load_into_task(task, path);
+    return 0;
+}
+
+int32_t syscall_exit(task_t* task, int32_t return_code)
+{
+    task_manager_exit_task(&task_manager, task, return_code);
+    task_manager_yield_current(&task_manager);
     return 0;
 }
 
@@ -98,6 +104,11 @@ void syscall_handler(register_interrupt_data_t* data)
             syscall_execve(task, (const char*)data->ebx);
             data->useresp = task->task_esp;
             data->eip = task->task_init_eip;
+            break;
+        }
+        case SYSCALL_EXIT:
+        {
+            syscall_exit(task, (int32_t)data->ebx);
             break;
         }
         case 10:

@@ -118,6 +118,9 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
     task->task_time_slice = TASK_MANAGER_DEFAULT_TIME_SLICE;
     task->task_queue_level = 0; // new tasks with the highest queue level
     task->task_init_eip = (uint32_t)entry;
+    task->parent = NULL;
+    task->children = NULL;
+    task->children_tail = NULL;
 
     page_entry_t* current_page_directory = (page_entry_t*)PAGE_DIRECTORY_VADDR;
     memory_paging_create_page_directory(&task->task_cr3); // todo: panic!!
@@ -206,29 +209,28 @@ void task_manager_module_init()
 void task_manager_schedule(task_manager_t* task_manager)
 {
     memory_paging_destroy_queued();
+
     if (timer_get_ticks() - task_manager->last_priority_boost_at_ticks >= TASK_MANAGER_PRIORITY_BOOST_INTERVAL)
     {
         task_manager_boost_priority_of_all_tasks(task_manager);
     }
+
     if (task_manager->task_current != NULL)
     {
         task_manager->task_current->task_time_slice--;
 
-        if (task_manager->task_current->task_time_slice <= 0)
+        if (task_manager->task_current->task_time_slice <= 0 || task_manager->task_current->yield)
         {
+            task_manager->task_current->yield = 0;
+            
             task_t* old_task = task_manager->task_current;
 
-            if (old_task != task_manager->task_idle &&
-                old_task->task_state == TASK_STATE_RUNNING)
+            if (old_task != task_manager->task_idle && old_task->task_state == TASK_STATE_RUNNING)
             {
-                task_manager_requeue_task(
-                    task_manager,
-                    old_task,
-                    1);
+                task_manager_requeue_task(task_manager, old_task, 1);
             }
 
-            task_t* new_task =
-                task_manager_pick_task(task_manager);
+            task_t* new_task = task_manager_pick_task(task_manager);
 
             new_task->task_state = TASK_STATE_RUNNING;
 
@@ -239,9 +241,7 @@ void task_manager_schedule(task_manager_t* task_manager)
             }
             else
             {
-                new_task->task_time_slice =
-                    task_manager_calculate_time_slice(
-                        new_task->task_queue_level);
+                new_task->task_time_slice = task_manager_calculate_time_slice(new_task->task_queue_level);
             }
         }
     }
@@ -254,8 +254,11 @@ task_t* task_manager_pick_task(task_manager_t* task_manager)
         if (task_manager->task_queues[queue_index] != NULL)
         {
             task_t* task = task_manager_dequeue_task(task_manager, queue_index);
-            task->task_time_slice = task_manager_calculate_time_slice(queue_index);
-            return task;
+            if (task->task_state != TASK_STATE_READY || task->task_state != TASK_STATE_RUNNING)
+            {
+                task->task_time_slice = task_manager_calculate_time_slice(queue_index);
+                return task;
+            }
         }
     }
     return task_manager->task_idle;
@@ -290,4 +293,75 @@ void task_manager_boost_priority_of_all_tasks(task_manager_t* task_manager)
         }
     }
     task_manager->last_priority_boost_at_ticks = timer_get_ticks();
+}
+
+task_manager_result_t task_manager_add_child_to_task(task_t* parent, task_t* child)
+{
+    task_node_t* node = (task_node_t*)kernel_heap_malloc(sizeof(task_node_t));
+    node->task = child;
+    node->next = NULL;
+    node->previous = parent->children_tail;
+
+    if (parent->children == NULL)
+    {
+        parent->children = node;
+        parent->children_tail = node;
+        return TASK_MANAGER_RESULT_OK;
+    }
+
+    parent->children_tail->next = node;
+    parent->children_tail = node;
+    return TASK_MANAGER_RESULT_OK;
+}
+
+task_manager_result_t task_manager_remove_child_from_task(task_t* parent, task_t* child)
+{
+    task_node_t* head = parent->children;
+    while (head != NULL)
+    {
+        if (head->task == child)
+        {
+            if (head->previous != NULL) head->previous->next = head->next;
+            else parent->children = head->next;
+
+            if (head->next != NULL) head->next->previous = head->previous;
+            else parent->children_tail = head->previous;
+
+            kernel_heap_free(head);
+            return TASK_MANAGER_RESULT_OK;
+        }
+        head = head->next;
+    }
+    return TASK_MANAGER_CHILD_NOT_FOUND;
+}
+
+task_manager_result_t task_manager_exit_task(task_manager_t* task_manager, task_t* task, int32_t return_code)
+{
+    task->task_state = TASK_STATE_ZOMBIE;
+    task->return_code = return_code;
+
+    task_node_t* head = task->children;
+    while (head != NULL)
+    {
+        task_node_t* next = head->next;
+
+        head->task->parent = NULL;
+        kernel_heap_free(head);
+
+        head = next;
+    }
+    
+    task_manager_enqueue_task(task_manager, TASK_MANAGER_QUEUE_INDEX_ZOMBIE, task);
+
+    return TASK_MANAGER_RESULT_OK;
+}
+
+task_manager_result_t task_manager_yield_current(task_manager_t* task_manager)
+{
+    if (task_manager->task_current != NULL)
+    {
+        task_manager->task_current->yield = 1;
+        task_manager_schedule(task_manager);
+    }
+    return TASK_MANAGER_RESULT_OK;
 }

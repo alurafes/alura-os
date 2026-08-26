@@ -3,6 +3,8 @@
 global isr_stub_handler
 extern isr_handler
 extern task_manager
+extern task_manager_task_switch
+
 isr_stub_handler:
     push eax
     push ecx
@@ -34,6 +36,13 @@ isr_stub_handler:
     mov cr3, eax
 
 .isr_stub_handler_finish:
+    cmp dword [task_manager + task_manager_t.task_needs_switching], 0
+    je .isr_stub_handler_finish_normal
+
+    mov dword [task_manager + task_manager_t.task_needs_switching], 0
+    jmp task_manager_task_switch
+
+.isr_stub_handler_finish_normal:
     pop gs
     pop fs
     pop es

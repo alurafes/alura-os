@@ -38,6 +38,6 @@ void _start(void)
     }
     while (1)
     {
-        
+        syscall1(10, (int)"i am task one\n");
     }
 }
