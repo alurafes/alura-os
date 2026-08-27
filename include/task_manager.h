@@ -8,6 +8,7 @@
 #include "memory_paging.h"
 #include "idt.h"
 #include "drivers/timer.h"
+#include "syscall.h"
 
 typedef struct resource_t resource_t;
 
@@ -39,6 +40,11 @@ typedef enum task_state_t {
     TASK_STATE_TERMINATED
 } task_state_t;
 
+typedef enum task_wait_reason_t {
+    TASK_WAIT_REASON_NONE = 0,
+    TASK_WAIT_REASON_CHILD
+} task_wait_reason_t;
+
 typedef struct task_t task_t;
 
 typedef struct task_node_t {
@@ -62,6 +68,8 @@ typedef struct task_t {
     uint8_t task_is_user;
 
     struct task_t* next;
+    
+    uint8_t syscall_retry; // as i can't yield within the syscall code itself, the task retries the syscall after it gets unblocked
 
     // anything below i wont add into the asm file
 
@@ -72,6 +80,9 @@ typedef struct task_t {
     task_node_t* children_tail;
     int32_t return_code;
     uint8_t yield;
+    syscall_execution_t syscall_execution;
+    task_wait_reason_t wait_reason;
+    void* wait_object;
 } task_t;
 
 typedef struct task_manager_t {
@@ -93,6 +104,8 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
 task_t* task_manager_task_copy(task_manager_t* task_manager, task_t* parent, uint8_t enqueue);
 task_manager_result_t task_manager_prepare_new_stack(page_entry_t* task_page_directory, uint8_t task_is_user, uint32_t eip, uint32_t* out_esp);
 task_manager_result_t task_manager_exit_task(task_manager_t* task_manager, task_t* task, int32_t return_code);
+task_manager_result_t task_manager_block_task(task_manager_t* task_manager, task_t* task, task_wait_reason_t wait_reason, void* wait_object);
+task_manager_result_t task_manager_unblock_task(task_manager_t* task_manager, task_t* task);
 
 task_manager_result_t task_manager_add_child_to_task(task_t* parent, task_t* child);
 task_manager_result_t task_manager_remove_child_from_task(task_t* parent, task_t* child);
@@ -100,6 +113,8 @@ task_manager_result_t task_manager_remove_child_from_task(task_t* parent, task_t
 void task_manager_schedule(task_manager_t* task_manager);
 task_t* task_manager_create_idle_task(task_manager_t* task_manager);
 task_t* task_manager_pick_task(task_manager_t* task_manager);
+task_t* task_manager_find_child(task_manager_t* task_manager, task_t* parent, uint32_t pid);
+task_t* task_manager_find_zombie_child(task_manager_t* task_manager, task_t* parent);
 uint32_t task_manager_calculate_time_slice(uint32_t queue_level);
 void task_manager_boost_priority_of_all_tasks(task_manager_t* task_manager);
 task_manager_result_t task_manager_yield_current(task_manager_t* task_manager);

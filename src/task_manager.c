@@ -11,6 +11,8 @@ void task_manager_enqueue_task(task_manager_t* task_manager, size_t queue_index,
     if (task == task_manager->task_idle) return;
     task->next = NULL;
 
+    task->task_queue_level = queue_index;
+
     if (task_manager->task_queues[queue_index] == NULL)
     {
         task_manager->task_queues[queue_index] = task;
@@ -112,15 +114,10 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
     task_t* task = (task_t*)kernel_heap_calloc(sizeof(task_t)); 
 
     task->task_id = task_id++;
-    task->next = NULL;
-
     task->task_state = TASK_STATE_READY;
     task->task_time_slice = TASK_MANAGER_DEFAULT_TIME_SLICE;
     task->task_queue_level = 0; // new tasks with the highest queue level
     task->task_init_eip = (uint32_t)entry;
-    task->parent = NULL;
-    task->children = NULL;
-    task->children_tail = NULL;
 
     page_entry_t* current_page_directory = (page_entry_t*)PAGE_DIRECTORY_VADDR;
     memory_paging_create_page_directory(&task->task_cr3); // todo: panic!!
@@ -356,6 +353,30 @@ task_manager_result_t task_manager_exit_task(task_manager_t* task_manager, task_
     return TASK_MANAGER_RESULT_OK;
 }
 
+task_manager_result_t task_manager_block_task(task_manager_t* task_manager, task_t* task, task_wait_reason_t wait_reason, void* wait_object)
+{
+    if (task->task_state == TASK_STATE_BLOCKED) return TASK_MANAGER_RESULT_OK;
+
+    task->task_state = TASK_STATE_BLOCKED;
+    task->wait_object = wait_object;
+    task->wait_reason = wait_reason;
+    task_manager_remove_task_from_queue(task_manager, task->task_queue_level, task);
+    task_manager_enqueue_task(task_manager, TASK_MANAGER_QUEUE_INDEX_BLOCKED, task);
+
+    return TASK_MANAGER_RESULT_OK;
+}
+
+task_manager_result_t task_manager_unblock_task(task_manager_t* task_manager, task_t* task)
+{
+    if (task->task_state != TASK_STATE_BLOCKED) return TASK_MANAGER_RESULT_OK;
+
+    task->task_state = TASK_STATE_READY;
+    task_manager_remove_task_from_queue(task_manager, task->task_queue_level, task);
+    task_manager_enqueue_task(task_manager, 0, task);
+
+    return TASK_MANAGER_RESULT_OK;
+}
+
 task_manager_result_t task_manager_yield_current(task_manager_t* task_manager)
 {
     if (task_manager->task_current != NULL)
@@ -364,4 +385,30 @@ task_manager_result_t task_manager_yield_current(task_manager_t* task_manager)
         task_manager_schedule(task_manager);
     }
     return TASK_MANAGER_RESULT_OK;
+}
+
+task_t* task_manager_find_child(task_manager_t* task_manager, task_t* parent, uint32_t pid)
+{
+    task_node_t* head = parent->children;
+
+    while (head != NULL)
+    {
+        if (head->task->task_id == pid) return head->task;
+        head = head->next;
+    }
+
+    return NULL;
+}
+
+task_t* task_manager_find_zombie_child(task_manager_t* task_manager, task_t* parent)
+{
+    task_node_t* head = parent->children;
+
+    while (head != NULL)
+    {
+        if (head->task->task_state == TASK_STATE_ZOMBIE) return head->task;
+        head = head->next;
+    }
+
+    return NULL;
 }

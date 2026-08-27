@@ -15,4 +15,5 @@ struc task_t
     .stack_top resd 1
     .task_is_user resb 1
     .task_next resd 1
+    .syscall_retry resb 1
 endstruc

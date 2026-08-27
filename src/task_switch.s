@@ -25,9 +25,16 @@ task_manager_task_switch:
     mov eax, [esi + task_t.task_cr3]
     mov ebx, cr3
     cmp eax, ebx
-    je .task_switch_finish
+    je .no_cr3_switch
     mov cr3, eax
 
+.no_cr3_switch:
+    cmp dword [esi + task_t.syscall_retry], 0
+    je .task_switch_finish
+
+    mov eax, [esi + task_t.task_esp]
+    sub dword [eax + 52], 2
+    
 .task_switch_finish:
     pop gs
     pop fs

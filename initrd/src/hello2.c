@@ -14,10 +14,6 @@ static inline int syscall1(int n, int a1)
 
 void _start(void)
 {
-    syscall1(10, (int)"i have been execve'd\n");
+    syscall1(10, (int)"exiting with code 99\n");
     syscall1(5, (int)99);
-    while (1)
-    {
-        syscall1(10, (int)"i am task two\n");
-    }
 }

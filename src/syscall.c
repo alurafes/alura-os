@@ -2,118 +2,222 @@
 #include "idt.h"
 #include "vfs.h"
 #include "elf_executable.h"
+#include "task_manager.h"
 
 #include "print.h"
 
-int32_t syscall_open(task_t* task, const char* path)
+syscall_t syscall;
+
+int32_t syscall_open()
 {
+    const char* path = (const char*)SYSCALL_GET_PARAMETER(0);
+
     vfs_node_t* node = NULL;
     resource_result_t result = vfs_resolve(&vfs, path, &node);
-    if (result != RESOURCE_RESULT_OK) return -(int32_t)result;
+    if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
     
-    if (node->type != VFS_NODE_TYPE_FILE) return -(int32_t)RESOURCE_RESULT_INVALID;
+    if (node->type != VFS_NODE_TYPE_FILE) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
     
     size_t index = 0;
-    result = resource_register(task, RESOURCE_TYPE_FILE, node, &vfs_operations, &index);
-    if (result != RESOURCE_RESULT_OK) return -(int32_t)result;
+    result = resource_register(SYSCALL_TASK, RESOURCE_TYPE_FILE, node, &vfs_operations, &index);
+    if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
 
     return index;
 }
 
-int32_t syscall_close(task_t* task, uint32_t resource_index)
+int32_t syscall_close()
 {
-    resource_t* resource = task->resources[resource_index];
-    if (!resource) return -(int32_t)RESOURCE_RESULT_INVALID;
+    uint32_t resource_index = (uint32_t)SYSCALL_GET_PARAMETER(0);
+
+    resource_t* resource = SYSCALL_TASK->resources[resource_index];
+    if (!resource) return -(int32_t)SYSCALL_RESULT_FAIL;
 
     resource->operations.close(resource);
-    resource_remove(task, resource_index);
+    resource_remove(SYSCALL_TASK, resource_index);
     
     return 0;
 }
 
-int32_t syscall_read(task_t* task, uint32_t resource_index, void* buffer, size_t length)
+int32_t syscall_read()
 {
-    if (task->task_is_user && (uintptr_t)buffer >= KERNEL_VIRTUAL_SPACE_START) return -(int32_t)RESOURCE_RESULT_BAD_PARAMETER;
-    if (resource_index >= TASK_MAX_RESOURCES) return -(int32_t)RESOURCE_RESULT_BAD_PARAMETER;
+    uint32_t resource_index = (uint32_t)SYSCALL_GET_PARAMETER(0);
+    void* buffer = (void*)SYSCALL_GET_PARAMETER(1);
+    size_t length = (size_t)SYSCALL_GET_PARAMETER(2);
 
-    resource_t* resource = task->resources[resource_index];
-    if (!resource) return -(int32_t)RESOURCE_RESULT_INVALID;
+    if (SYSCALL_TASK->task_is_user && (uintptr_t)buffer >= KERNEL_VIRTUAL_SPACE_START) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    if (resource_index >= TASK_MAX_RESOURCES) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+
+    resource_t* resource = SYSCALL_TASK->resources[resource_index];
+    if (!resource) return -(int32_t)SYSCALL_RESULT_FAIL;
 
     size_t read_bytes = 0;
     // todo: passing 0 as offset. Gotta switch to system v abi soon (horrible stack parameters stuff)
     resource_result_t result = resource->operations.read(resource, 0, buffer, length, &read_bytes);
-    if (result != RESOURCE_RESULT_OK) return -(int32_t)result;
+    if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
 
     return read_bytes;
 }
 
-int32_t syscall_fork(register_interrupt_data_t* data, task_t* task)
+int32_t syscall_fork()
 {
-    task_t* child_task = task_manager_task_copy(&task_manager, task, 1);
-    child_task->parent = task;
-    task_manager_add_child_to_task(task, child_task);
+    task_t* child_task = task_manager_task_copy(&task_manager, SYSCALL_TASK, 1);
+    child_task->parent = SYSCALL_TASK;
+    task_manager_add_child_to_task(SYSCALL_TASK, child_task);
     return child_task->task_id;
 }
 
-int32_t syscall_execve(task_t* task, const char* path)
+int32_t syscall_execve()
 {
-    elf_load_into_task(task, path);
-    return 0;
+    const char* path = (const char*)SYSCALL_GET_PARAMETER(0);
+
+    elf_load_into_task(SYSCALL_TASK, path);
+    return SYSCALL_RESULT_OK;
 }
 
-int32_t syscall_exit(task_t* task, int32_t return_code)
+int32_t syscall_exit()
 {
-    task_manager_exit_task(&task_manager, task, return_code);
+    int32_t return_code = (int32_t)SYSCALL_GET_PARAMETER(0);
+
+    task_t *parent = SYSCALL_TASK->parent;
+
+    if (
+        parent != NULL &&
+        parent->task_state == TASK_STATE_BLOCKED &&
+        parent->wait_reason == TASK_WAIT_REASON_CHILD &&
+        (parent->wait_object == (void*)SYSCALL_TASK->task_id ||
+        parent->wait_object == (void*)-1)
+    )
+    {
+        task_manager_unblock_task(&task_manager, parent);
+    }
+
+    task_manager_exit_task(&task_manager, SYSCALL_TASK, return_code);
     task_manager_yield_current(&task_manager);
-    return 0;
+
+    return SYSCALL_RESULT_OK;
 }
 
-int32_t syscall_print(task_t* task, const char* message)
+int32_t syscall_waitpid()
 {
-    printf("<task %d>: %s", task->task_id, message);
+    int32_t pid = (int32_t)SYSCALL_GET_PARAMETER(0);
+    int32_t* result = (int32_t*)SYSCALL_GET_PARAMETER(1);
+
+    task_t *child = NULL;
+
+    if (pid == -1)
+    {
+        child = task_manager_find_zombie_child(&task_manager, SYSCALL_TASK);
+    }
+    else
+    {
+        child = task_manager_find_child(&task_manager, SYSCALL_TASK, pid);
+        if (child != NULL && child->task_state != TASK_STATE_ZOMBIE)
+        {
+            child = NULL;
+        }
+    }
+
+    // no zombies found
+    if (child == NULL)
+    {
+        if (pid != -1)
+        {
+            task_t *existing_child = task_manager_find_child(&task_manager, SYSCALL_TASK, pid);
+            if (existing_child == NULL)
+            {
+                SYSCALL_TASK->syscall_retry = 0;
+                return -(int32_t)SYSCALL_RESULT_FAIL;
+            }
+        }
+
+        task_manager_block_task(&task_manager, SYSCALL_TASK, TASK_WAIT_REASON_CHILD, (void*)pid);
+        task_manager_yield_current(&task_manager);
+        SYSCALL_TASK->syscall_retry = 1;
+
+        return -(int32_t)SYSCALL_RESULT_BUSY;
+    }
+
+    int32_t return_code = child->return_code;
+    int32_t child_pid = child->task_id;
+
+    // todo kill task
+
+    SYSCALL_TASK->syscall_retry = 0;
+
+    if (result != NULL)
+    {
+        *result = return_code;
+    }
+
+    return child_pid;
+}
+
+int32_t syscall_print()
+{
+    const char* message = (const char*)SYSCALL_GET_PARAMETER(0);
+
+    printf("<task %d>: %s", SYSCALL_TASK->task_id, message);
     return 0;
 }
 
 void syscall_handler(register_interrupt_data_t* data)
 {
-    task_t* task = task_manager.task_current;
-    switch (data->eax)
+    syscall.caller_task = task_manager.task_current;
+    syscall.current_register_data = data;
+
+    if (!syscall.caller_task->syscall_retry)
+    {
+        syscall.caller_task->syscall_execution.index = data->eax;
+        syscall.caller_task->syscall_execution.parameters[0] = data->ebx;
+        syscall.caller_task->syscall_execution.parameters[1] = data->ecx;
+        syscall.caller_task->syscall_execution.parameters[2] = data->edx;
+        syscall.caller_task->syscall_execution.parameters[3] = data->esi;
+        syscall.caller_task->syscall_execution.parameters[4] = data->edi;
+        syscall.caller_task->syscall_execution.parameters[5] = 0; // will be changed when i do system v abi for x86 (stack)
+    }
+
+    switch (syscall.caller_task->syscall_execution.index)
     {
         case SYSCALL_OPEN:
         {
-            data->eax = syscall_open(task, (const char*)data->ebx);
+            data->eax = syscall_open();
             break;
         }
         case SYSCALL_CLOSE:
         {
-            data->eax = syscall_close(task, data->ebx);
+            data->eax = syscall_close();
             break;
         }
         case SYSCALL_READ:
         {
-            data->eax = syscall_read(task, data->ebx, (void*)data->ecx, data->edx);
+            data->eax = syscall_read();
             break;
         }
         case SYSCALL_FORK:
         {
-            data->eax = syscall_fork(data, task);
+            data->eax = syscall_fork();
             break;
         }
         case SYSCALL_EXECVE:
         {
-            syscall_execve(task, (const char*)data->ebx);
-            data->useresp = task->task_esp;
-            data->eip = task->task_init_eip;
+            syscall_execve();
+            data->useresp = syscall.caller_task->task_esp;
+            data->eip = syscall.caller_task->task_init_eip;
             break;
         }
         case SYSCALL_EXIT:
         {
-            syscall_exit(task, (int32_t)data->ebx);
+            syscall_exit();
+            break;
+        }
+        case SYSCALL_WAITPID:
+        {
+            data->eax = syscall_waitpid();
             break;
         }
         case 10:
         {
-            data->eax = syscall_print(task, (const char*)data->ebx);
+            data->eax = syscall_print();
             break;
         }
     }
