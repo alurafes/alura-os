@@ -24,4 +24,14 @@ static inline void io_wait()
     io_outb(0x80, 0);
 }
 
+static inline void io_cli()
+{
+    __asm__ volatile ("cli" ::: "memory");
+}
+
+static inline void io_sti()
+{
+    __asm__ volatile ("sti" ::: "memory");
+}
+
 #endif // ALURA_IO_H

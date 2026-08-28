@@ -29,7 +29,8 @@ typedef struct resource_t resource_t;
 typedef enum task_manager_result_t {
     TASK_MANAGER_RESULT_OK = 0,
     TASK_MANAGER_RESULT_QUEUE_TASK_NOT_FOUND,
-    TASK_MANAGER_CHILD_NOT_FOUND,
+    TASK_MANAGER_RESULT_OUT_OF_MEMORY,
+    TASK_MANAGER_RESULT_CHILD_NOT_FOUND,
 } task_manager_result_t;
 
 typedef enum task_state_t {
@@ -42,7 +43,8 @@ typedef enum task_state_t {
 
 typedef enum task_wait_reason_t {
     TASK_WAIT_REASON_NONE = 0,
-    TASK_WAIT_REASON_CHILD
+    TASK_WAIT_REASON_CHILD,
+    TASK_WAIT_REASON_IO
 } task_wait_reason_t;
 
 typedef struct task_t task_t;
@@ -95,6 +97,7 @@ typedef struct task_manager_t {
     task_t* task_queues[TASK_MANAGER_QUEUE_LEVELS + 2]; // +1 blocked, +2 zombies
     
     uint64_t last_priority_boost_at_ticks;
+    task_t* task_init;
 } task_manager_t;
 
 extern task_manager_t task_manager;
@@ -106,6 +109,7 @@ task_manager_result_t task_manager_prepare_new_stack(page_entry_t* task_page_dir
 task_manager_result_t task_manager_exit_task(task_manager_t* task_manager, task_t* task, int32_t return_code);
 task_manager_result_t task_manager_block_task(task_manager_t* task_manager, task_t* task, task_wait_reason_t wait_reason, void* wait_object);
 task_manager_result_t task_manager_unblock_task(task_manager_t* task_manager, task_t* task);
+void task_manager_wake_blocked_on(task_manager_t* task_manager, task_wait_reason_t wait_reason, void* wait_object);
 
 task_manager_result_t task_manager_add_child_to_task(task_t* parent, task_t* child);
 task_manager_result_t task_manager_remove_child_from_task(task_t* parent, task_t* child);

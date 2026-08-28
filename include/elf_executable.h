@@ -74,6 +74,6 @@ typedef enum elf_result_t {
 } elf_result_t;
 
 elf_result_t elf_load_into_task(task_t* task, const char* path);
-elf_result_t elf_load_and_execute(const char* path);
+elf_result_t elf_load_and_execute(const char *path, task_t** task);
 
 #endif // ALURA_ELF_EXECUTABLE_H

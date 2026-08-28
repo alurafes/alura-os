@@ -22,8 +22,15 @@ vga_result_t vga_create(vga_t* out)
     return VGA_RESULT_OK;
 }
 
+void vga_cursor_disable()
+{
+    io_outb(0x3D4, 0x0A);
+    io_outb(0x3D5, 0x20);
+}
+
 vga_t vga;
 void vga_module_init()
 {
     vga_create(&vga);
+    vga_cursor_disable();
 }

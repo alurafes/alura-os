@@ -390,10 +390,15 @@ void memory_paging_destroy_queued()
     page_directory_node_t* head = page_directories_to_destroy;
     while (head != NULL)
     {
+        page_directory_node_t* next = head->next;
+
         page_entry_t* page_directory = (page_entry_t*)bounce_alloc((uintptr_t)head->page_directory);
         memory_paging_free_page_directory(page_directory);
         bounce_free((uintptr_t)page_directory);
-        head = head->next;
         kernel_heap_free(head);
+
+        head = next;
     }
+    page_directories_to_destroy = NULL;
+    page_directories_to_destroy_tail = NULL;
 }

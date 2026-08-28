@@ -152,16 +152,12 @@ elf_result_t elf_load_into_task(task_t* task, const char* path)
 
     memory_paging_queue_to_destroy(current_page_directory_phys);
 
-    // page_entry_t* current_page_directory = bounce_alloc();
-
-    // if (current_page_directory_phys != kernel_page_directory_phys) memory_paging_free_page_directory(current_page_directory);
-    // bounce_free((uintptr_t)current_page_directory);
-
     return ELF_RESULT_OK;
 }
 
-elf_result_t elf_load_and_execute(const char *path)
+elf_result_t elf_load_and_execute(const char *path, task_t** task)
 {
-    task_t* task = task_manager_task_create(&task_manager, NULL, 1, 1);
-    return elf_load_into_task(task, path);
+    task_t* created_task = task_manager_task_create(&task_manager, NULL, 1, 1);
+    if (task) *task = created_task;
+    return elf_load_into_task(created_task, path);
 }

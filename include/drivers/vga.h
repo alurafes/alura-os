@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "display_driver.h"
+#include "io.h"
 
 #define VGA_BUFFER 0xC00B8000
 #define VGA_WIDTH 80
@@ -45,6 +46,7 @@ typedef struct vga_t {
 vga_result_t vga_create(vga_t* out);
 vga_result_t vga_set_color(vga_t* vga, vga_color_t color);
 void vga_put_char(display_driver_t* driver, char character, unsigned int x, unsigned int y);
+void vga_cursor_disable();
 
 extern vga_t vga;
 void vga_module_init();

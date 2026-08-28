@@ -258,6 +258,7 @@ task_t* task_manager_pick_task(task_manager_t* task_manager)
             }
         }
     }
+    task_manager->task_idle->task_time_slice = task_manager_calculate_time_slice(0);
     return task_manager->task_idle;
 }
 
@@ -329,7 +330,7 @@ task_manager_result_t task_manager_remove_child_from_task(task_t* parent, task_t
         }
         head = head->next;
     }
-    return TASK_MANAGER_CHILD_NOT_FOUND;
+    return TASK_MANAGER_RESULT_CHILD_NOT_FOUND;
 }
 
 task_manager_result_t task_manager_exit_task(task_manager_t* task_manager, task_t* task, int32_t return_code)
@@ -341,12 +342,28 @@ task_manager_result_t task_manager_exit_task(task_manager_t* task_manager, task_
     while (head != NULL)
     {
         task_node_t* next = head->next;
+        task_t *child = head->task;
 
-        head->task->parent = NULL;
+        child->parent = task_manager->task_init;
+
+        task_node_t *node = kernel_heap_malloc(sizeof(task_node_t));
+
+        if (node == NULL)
+        {
+            // todo: hmm
+            return TASK_MANAGER_RESULT_OUT_OF_MEMORY;
+        }
+
+        node->task = child;
+        node->next = task_manager->task_init->children;
+        task_manager->task_init->children = node;
+
         kernel_heap_free(head);
 
         head = next;
     }
+
+    task->children = NULL;
     
     task_manager_enqueue_task(task_manager, TASK_MANAGER_QUEUE_INDEX_ZOMBIE, task);
 
@@ -375,6 +392,20 @@ task_manager_result_t task_manager_unblock_task(task_manager_t* task_manager, ta
     task_manager_enqueue_task(task_manager, 0, task);
 
     return TASK_MANAGER_RESULT_OK;
+}
+
+void task_manager_wake_blocked_on(task_manager_t* task_manager, task_wait_reason_t wait_reason, void* wait_object)
+{
+    task_t* head = task_manager->task_queues[TASK_MANAGER_QUEUE_INDEX_BLOCKED];
+    while (head != NULL)
+    {
+        task_t* next = head->next;
+        if (head->wait_reason == wait_reason && head->wait_object == wait_object)
+        {
+            task_manager_unblock_task(task_manager, head);
+        }
+        head = next;
+    }
 }
 
 task_manager_result_t task_manager_yield_current(task_manager_t* task_manager)
