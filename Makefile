@@ -30,6 +30,8 @@ OBJS     := $(C_OBJS) $(ASM_OBJS)
 
 # Targets
 
+.PHONY: all link iso run clean initrd
+
 all: initrd iso
 
 $(BUILDDIR)/%.o: src/%.c
