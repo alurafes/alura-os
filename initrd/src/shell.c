@@ -49,9 +49,65 @@ static const char keymap_shift[128] =
     ' ',
 };
 
+#define LINE_MAX 256
+
+static void write_char(int fd, char c)
+{
+    write(STDOUT, &c, 1);
+}
+
+static int str_len(const char* s)
+{
+    int n = 0;
+    while (s[n]) n++;
+    return n;
+}
+
+static void write_str(int fd, const char* s)
+{
+    write(STDOUT, s, str_len(s));
+}
+
+static int str_eq(const char* a, const char* b)
+{
+    while (*a && *b)
+    {
+        if (*a != *b) return 0;
+        a++;
+        b++;
+    }
+    return *a == *b;
+}
+
+static void run_command(int fd, const char* line)
+{
+    int pid = fork();
+    if (pid == 0)
+    {
+        char* argv[] = {line, NULL};
+        int exec = execve(line, argv);
+        if (exec < 0)
+        {
+            write_str(fd, "unknown command: ");
+            write_str(fd, line);
+            write_char(fd, '\n');
+            exit(exec);
+        }
+    }
+    else
+    {
+        waitpid(-1, 0);
+    }
+}
+
 int main(int argc, char** argv)
 {
+    write_str(STDOUT, "> ");
+
+    char line[LINE_MAX];
+    int line_length = 0;
     int shift = 0;
+
     for (;;)
     {
         unsigned char scancode;
@@ -72,7 +128,33 @@ int main(int argc, char** argv)
         char character = shift ? keymap_shift[key] : keymap[key];
         if (character == 0) continue;
 
-        write(STDOUT, &character, 1);
+        if (character == '\b')
+        {
+            if (line_length > 0)
+            {
+                line_length--;
+                write_char(STDOUT, character);
+            }
+            continue;
+        }
+
+        if (character == '\n')
+        {
+            line[line_length] = 0;
+            write_char(STDOUT, character);
+
+            run_command(STDOUT, line);
+
+            line_length = 0;
+            write_str(STDOUT, "> ");
+            continue;
+        }
+
+        if (line_length < LINE_MAX - 1)
+        {
+            line[line_length++] = character;
+            write_char(STDOUT, character);
+        }
     }
 
     return 0;

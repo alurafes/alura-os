@@ -47,6 +47,7 @@ vga_result_t vga_create(vga_t* out);
 vga_result_t vga_set_color(vga_t* vga, vga_color_t color);
 void vga_put_char(display_driver_t* driver, char character, unsigned int x, unsigned int y);
 void vga_cursor_disable();
+void vga_set_cursor(display_driver_t* driver, unsigned int x, unsigned int y);
 
 extern vga_t vga;
 void vga_module_init();

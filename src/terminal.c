@@ -1,6 +1,5 @@
 #include "terminal.h"
 
-
 terminal_result_t terminal_set_cursor(terminal_t* terminal, terminal_point_t point)
 {
     if (point.x < 0 || point.x >= TERMINAL_WIDTH ||
@@ -26,6 +25,7 @@ terminal_result_t terminal_set_cursor(terminal_t* terminal, terminal_point_t poi
             }
         }
     terminal->cursor = point;
+    terminal->driver->set_cursor(terminal->driver, terminal->cursor.x, terminal->cursor.y);
     return TERMINAL_RESULT_OK;
 }
 
