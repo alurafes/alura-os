@@ -4,7 +4,7 @@
 
 resource_result_t resource_register(task_t* task, resource_type_t type, void* data, resource_operations_t* operations, size_t* result)
 {
-    if (!task || !operations || !result) return RESOURCE_RESULT_BAD_PARAMETER;
+    if (!task || !operations) return RESOURCE_RESULT_BAD_PARAMETER;
     int32_t free_index = -1;
     for (size_t i = 0; i < TASK_MAX_RESOURCES; ++i)
     {
@@ -20,9 +20,10 @@ resource_result_t resource_register(task_t* task, resource_type_t type, void* da
     resource->type = type;
     resource->data = data;
     resource->operations = *operations;
+    resource->ref_count = 1;
 
     task->resources[free_index] = resource;
-    *result = free_index;
+    if (result != NULL) *result = free_index;
     return RESOURCE_RESULT_OK;
 }
 
@@ -32,8 +33,23 @@ resource_result_t resource_remove(task_t* task, size_t index)
     resource_t* resource = task->resources[index];
     if (!resource) return RESOURCE_RESULT_OK;
 
-    kernel_heap_free(resource);
+    resource->ref_count--;
+    if (resource->ref_count == 0)
+    {
+        if (resource->operations.close != NULL)
+        {
+            resource->operations.close(resource);
+        }
+        kernel_heap_free(resource);
+    }
+
     task->resources[index] = NULL;
 
     return RESOURCE_RESULT_OK;
+}
+
+resource_result_t resource_share(task_t* child, size_t index, resource_t* resource)
+{
+    resource->ref_count++;
+    child->resources[index] = resource;
 }

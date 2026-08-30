@@ -175,6 +175,14 @@ task_t* task_manager_task_copy(task_manager_t* task_manager, task_t* parent, uin
     bounce_free((uintptr_t)kernel_stack);
     bounce_free((uintptr_t)task_page_directory);
 
+    for (size_t i = 0; i < TASK_MAX_RESOURCES; ++i)
+    {
+        if (parent->resources[i] != NULL)
+        {
+            resource_share(task, i, parent->resources[i]);
+        }
+    }
+
     if (enqueue) task_manager_enqueue_task(task_manager, task->task_queue_level, task);
 
     return task;
@@ -451,8 +459,6 @@ void task_manager_destroy_task(task_manager_t* task_manager, task_t* task)
     {
         resource_t* resource = task->resources[i];
         if (!resource) continue;
-
-        resource->operations.close(resource);
         resource_remove(task, i);
     }
 

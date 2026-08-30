@@ -51,11 +51,6 @@ int32_t syscall_close()
     resource_t* resource = SYSCALL_TASK->resources[resource_index];
     if (!resource) return -(int32_t)SYSCALL_RESULT_FAIL;
 
-    if (resource->operations.close != NULL) 
-    {
-        resource->operations.close(resource);
-    }
-
     resource_remove(SYSCALL_TASK, resource_index);
     
     return SYSCALL_RESULT_OK;
