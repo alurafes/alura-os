@@ -79,17 +79,46 @@ static int str_eq(const char* a, const char* b)
     return *a == *b;
 }
 
-static void run_command(int fd, const char* line)
+#define ARGV_MAX 16
+
+static int parse_args(char* line, char* argv[])
 {
+    int argc = 0;
+    char* p = line;
+
+    while (*p && argc < ARGV_MAX - 1)
+    {
+        while (*p == ' ') p++;
+        if (!*p) break;
+
+        argv[argc++] = p;
+
+        while (*p && *p != ' ') p++;
+        if (*p)
+        {
+            *p = 0;
+            p++;
+        }
+    }
+
+    argv[argc] = NULL;
+    return argc;
+}
+
+static void run_command(int fd, char* line)
+{
+    char* argv[ARGV_MAX];
+    int argc = parse_args(line, argv);
+    if (argc == 0) return;
+
     int pid = fork();
     if (pid == 0)
     {
-        char* argv[] = {line, NULL};
-        int exec = execve(line, argv);
+        int exec = execve(argv[0], argv);
         if (exec < 0)
         {
             write_str(fd, "unknown command: ");
-            write_str(fd, line);
+            write_str(fd, argv[0]);
             write_char(fd, '\n');
             exit(exec);
         }
