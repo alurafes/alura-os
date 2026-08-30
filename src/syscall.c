@@ -140,7 +140,7 @@ int32_t syscall_waitpid()
     int32_t return_code = child->return_code;
     int32_t child_pid = child->task_id;
 
-    // todo kill task
+    task_manager_destroy_task(&task_manager, child);
 
     SYSCALL_TASK->syscall_retry = 0;
 

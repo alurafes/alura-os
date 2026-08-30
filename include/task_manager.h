@@ -107,6 +107,7 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
 task_t* task_manager_task_copy(task_manager_t* task_manager, task_t* parent, uint8_t enqueue);
 task_manager_result_t task_manager_prepare_new_stack(page_entry_t* task_page_directory, uint8_t task_is_user, uint32_t eip, uint32_t* out_esp);
 task_manager_result_t task_manager_exit_task(task_manager_t* task_manager, task_t* task, int32_t return_code);
+void task_manager_destroy_task(task_manager_t* task_manager, task_t* task);
 task_manager_result_t task_manager_block_task(task_manager_t* task_manager, task_t* task, task_wait_reason_t wait_reason, void* wait_object);
 task_manager_result_t task_manager_unblock_task(task_manager_t* task_manager, task_t* task);
 void task_manager_wake_blocked_on(task_manager_t* task_manager, task_wait_reason_t wait_reason, void* wait_object);

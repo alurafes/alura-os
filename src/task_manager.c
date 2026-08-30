@@ -1,6 +1,7 @@
 #include "task_manager.h"
 #include "print.h"
 #include "libc/string.h"
+#include "resourse.h"
 
 task_manager_t task_manager;
 
@@ -442,4 +443,34 @@ task_t* task_manager_find_zombie_child(task_manager_t* task_manager, task_t* par
     }
 
     return NULL;
+}
+
+void task_manager_destroy_task(task_manager_t* task_manager, task_t* task)
+{
+    for (size_t i = 0; i < TASK_MAX_RESOURCES; ++i)
+    {
+        resource_t* resource = task->resources[i];
+        if (!resource) continue;
+
+        resource->operations.close(resource);
+        resource_remove(task, i);
+    }
+
+    if (task->parent != NULL)
+    {
+        task_manager_remove_child_from_task(task->parent, task);
+    }
+
+    task_manager_remove_task_from_queue(task_manager, task->task_queue_level, task);
+
+    page_entry_t* task_page_directory_phys = (page_entry_t*)task->task_cr3;
+    if (task_page_directory_phys != kernel_page_directory_phys)
+    {
+        page_entry_t* task_page_directory = (page_entry_t*)bounce_alloc((uintptr_t)task_page_directory_phys);
+        memory_paging_free_page_directory(task_page_directory);
+        bounce_free((uintptr_t)task_page_directory);
+        memory_bitmap_free(task_page_directory_phys);
+    }
+
+    kernel_heap_free(task);
 }

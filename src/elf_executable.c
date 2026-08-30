@@ -150,6 +150,8 @@ elf_result_t elf_load_into_task(task_t* task, const char* path)
     task->task_cr3 = (uint32_t)new_task_page_directory_phys;
     task->task_esp = new_task_esp;
 
+    bounce_free((uintptr_t)new_task_page_directory);
+
     memory_paging_queue_to_destroy(current_page_directory_phys);
 
     return ELF_RESULT_OK;

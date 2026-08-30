@@ -312,11 +312,13 @@ void memory_paging_free_page_directory(page_entry_t* page_directory)
 {
     if (!page_directory) return;
 
-    // Kernel PDEs are shared
-    for (uint32_t page_directory_entry = 0; page_directory_entry < KERNEL_PDE_START; ++page_directory_entry)
+    for (uint32_t page_directory_entry = 0; page_directory_entry < KERNEL_PDE_ENTRIES; ++page_directory_entry)
     {
+        if (page_directory_entry == 1023) continue;
         if (!(page_directory[page_directory_entry] & PAGE_PRESENT)) continue;
-        void* page_table_physical = (void*)(page_directory[page_directory_entry]);
+        if ((page_directory[page_directory_entry] & PAGE_MASK) == (kernel_page_directory[page_directory_entry] & PAGE_MASK)) continue;
+
+        void* page_table_physical = (void*)(page_directory[page_directory_entry] & PAGE_MASK);
         page_entry_t* page_table = (page_entry_t*)bounce_alloc((uintptr_t)page_table_physical);
         memory_paging_free_page_table(page_table);
         memory_bitmap_free(page_table_physical);
@@ -395,6 +397,7 @@ void memory_paging_destroy_queued()
         page_entry_t* page_directory = (page_entry_t*)bounce_alloc((uintptr_t)head->page_directory);
         memory_paging_free_page_directory(page_directory);
         bounce_free((uintptr_t)page_directory);
+        memory_bitmap_free(head->page_directory);
         kernel_heap_free(head);
 
         head = next;
