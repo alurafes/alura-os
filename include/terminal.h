@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include "display_driver.h"
+#include "resourse.h"
 
 #define TERMINAL_WIDTH 80
 #define TERMINAL_HEIGHT 25
@@ -47,5 +48,7 @@ terminal_result_t terminal_render(terminal_t* terminal);
 
 extern terminal_t terminal;
 void terminal_module_init(display_driver_t* driver);
+
+resource_result_t terminal_open(task_t* task, size_t* result);
 
 #endif // ALURA_TERMINAL_H

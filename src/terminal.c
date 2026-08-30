@@ -31,13 +31,21 @@ terminal_result_t terminal_set_cursor(terminal_t* terminal, terminal_point_t poi
 
 terminal_result_t terminal_put_char(terminal_t* terminal, char character)
 {
-    terminal->buffer[terminal->cursor.y * TERMINAL_WIDTH + terminal->cursor.x] = character;
     switch (character) {
         case '\n': {
+            terminal->buffer[terminal->cursor.y * TERMINAL_WIDTH + terminal->cursor.x] = character;
             terminal_set_cursor(terminal, (terminal_point_t){0, terminal->cursor.y + 1});
             return TERMINAL_RESULT_OK;
         }
+        case '\b': {
+            if (terminal->cursor.x == 0) return TERMINAL_RESULT_OK;
+            terminal_set_cursor(terminal, (terminal_point_t){terminal->cursor.x - 1, terminal->cursor.y});
+            terminal->buffer[terminal->cursor.y * TERMINAL_WIDTH + terminal->cursor.x] = ' ';
+            terminal->driver->put_char(terminal->driver, ' ', terminal->cursor.x, terminal->cursor.y);
+            return TERMINAL_RESULT_OK;
+        }
     }
+    terminal->buffer[terminal->cursor.y * TERMINAL_WIDTH + terminal->cursor.x] = character;
     terminal->driver->put_char(terminal->driver, character, terminal->cursor.x, terminal->cursor.y);
     terminal_point_t next_point = {
         .x = terminal->cursor.x + 1,
@@ -124,4 +132,30 @@ terminal_t terminal;
 void terminal_module_init(display_driver_t* driver)
 {
     terminal_create(&terminal, driver);
+}
+
+resource_result_t terminal_write(resource_t* resource, void* buffer, size_t length, size_t* written_bytes)
+{
+    terminal_t* terminal = (terminal_t*)resource->data;
+    const char* data = (const char*)buffer;
+
+    size_t written = 0;
+    while (written < length && data[written])
+    {
+        terminal_put_char(terminal, data[written]);
+        written++;
+    }
+
+    if (written_bytes != NULL) *written_bytes = written;
+
+    return RESOURCE_RESULT_OK;
+}
+
+resource_operations_t terminal_operations = {
+    .write = terminal_write
+};
+
+resource_result_t terminal_open(task_t* task, size_t* result)
+{
+    return resource_register(task, RESOURCE_TYPE_TERMINAL, &terminal, &terminal_operations, result);
 }

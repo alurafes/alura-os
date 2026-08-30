@@ -7,6 +7,7 @@
 #include "print.h"
 
 #include "drivers/keyboard.h"
+#include "terminal.h"
 
 syscall_t syscall;
 
@@ -19,6 +20,13 @@ int32_t syscall_open()
     {
         size_t index = 0;
         resource_result_t result = keyboard_open(SYSCALL_TASK, &index);
+        if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
+        return index;
+    }
+    if (strcmp(path, "/dev/terminal") == 0)
+    {
+        size_t index = 0;
+        resource_result_t result = terminal_open(SYSCALL_TASK, &index);
         if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
         return index;
     }
@@ -122,6 +130,8 @@ int32_t syscall_write()
 
         return -(int32_t)SYSCALL_RESULT_BUSY;
     }
+
+    SYSCALL_TASK->syscall_retry = 0;
 
     if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
 

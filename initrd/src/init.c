@@ -56,19 +56,86 @@ static inline int syscall3(int n, int a1, int a2, int a3)
 
 #define SYS_OPEN 0
 #define SYS_READ 2
+#define SYS_WRITE 3
 #define SYS_FORK 4
 #define SYS_EXECVE 5
 #define SYS_WAITPID 7
 #define SYS_PRINT 10
 
+static const char keymap[128] =
+{
+    0,
+    0,
+    '1','2','3','4','5','6','7','8','9','0',
+    '-','=',
+    '\b',
+    '\t',
+    'q','w','e','r','t','y','u','i','o','p',
+    '[',']',
+    '\n',
+    0,
+    'a','s','d','f','g','h','j','k','l',
+    ';','\'','`',
+    0,
+    '\\',
+    'z','x','c','v','b','n','m',
+    ',', '.', '/',
+    0,
+    '*',
+    0,
+    ' ',
+};
+
+static const char keymap_shift[128] =
+{
+    0,
+    0,
+    '!','@','#','$','%','^','&','*','(',')',
+    '_','+',
+    '\b',
+    '\t',
+    'Q','W','E','R','T','Y','U','I','O','P',
+    '{','}',
+    '\n',
+    0,
+    'A','S','D','F','G','H','J','K','L',
+    ':','"','~',
+    0,
+    '|',
+    'Z','X','C','V','B','N','M',
+    '<','>','?',
+    0,
+    '*',
+    0,
+    ' ',
+};
+
 void _start(void)
 {
     int keyboard = syscall1(SYS_OPEN, (int)"/dev/keyboard");
+    int terminal = syscall1(SYS_OPEN, (int)"/dev/terminal");
+
+    int shift = 0;
     while (1)
     {
         unsigned char scancode;
         int read = syscall3(SYS_READ, keyboard, (int)&scancode, 1);
         if (read <= 0) continue;
-        syscall2(SYS_PRINT, (int)"Scancode: %x\n", (int)scancode);
+        
+        unsigned char released = scancode & 0x80;
+        unsigned char key = scancode & 0x7F;
+
+        if (key == 42 || key == 54)
+        {
+            shift = !released;
+            continue;
+        }
+
+        if (released) continue;
+
+        char character = shift ? keymap_shift[key] : keymap[key];
+        if (character == 0) continue;
+
+        syscall3(SYS_WRITE, terminal, (int)&character, 1);
     }
 }
