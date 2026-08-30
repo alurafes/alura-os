@@ -44,7 +44,7 @@ int main(int argc, char** argv)
 {
     if (argc < 4)
     {
-        write(STDOUT, "usage: calc <a> <+/-/*> <b>\n", 28);
+        write(STDOUT, "usage: calc <a> <+|-|*|/> <b>\n", 30);
         return 1;
     }
 
@@ -52,9 +52,9 @@ int main(int argc, char** argv)
     char op = argv[2][0];
     int b = str_to_int(argv[3]);
 
-    if (op != '+' && op != '-' && op != '*')
+    if (op != '+' && op != '-' && op != '*' && op != '/')
     {
-        write(STDOUT, "usage: calc <a> <+/-/*> <b>\n", 28);
+        write(STDOUT, "usage: calc <a> <+|-|*|/> <b>\n", 30);
         return 1;
     }
 
@@ -64,6 +64,7 @@ int main(int argc, char** argv)
         case '+': result = a + b; break;
         case '-': result = a - b; break;
         case '*': result = a * b; break;
+        case '/': result = a / b; break;
     }
 
     char buf[16];

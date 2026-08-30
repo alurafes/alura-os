@@ -63,7 +63,36 @@ void isr_handler(register_interrupt_data_t* data)
             data->eflags, 
             data->useresp, 
             data->ss);
-        for(;;) asm("hlt");
+        
+        if ((data->cs & 0x3) != 3)
+        {
+            // halt if this happened in the kernel
+            for(;;) asm("hlt");
+        }
+        printf("\n[terminating user task]\n");
+        vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_BLACK, .foreground = VGA_COLOR_WHITE});
+        
+        task_t* faulting_task = task_manager.task_current;
+        if (faulting_task != NULL)
+        {
+            int32_t return_code = -(128 + (int32_t)data->interrupt_index);
+            task_t* parent = faulting_task->parent;
+            if (
+                parent != NULL &&
+                parent->task_state == TASK_STATE_BLOCKED &&
+                parent->wait_reason == TASK_WAIT_REASON_CHILD &&
+                (parent->wait_object == (void*)faulting_task->task_id ||
+                parent->wait_object == (void*)-1)
+            )
+            {
+                task_manager_unblock_task(&task_manager, parent);
+            }
+
+            task_manager_exit_task(&task_manager, faulting_task, return_code);
+            task_manager_yield_current(&task_manager);
+        }
+
+        return;
     }
     if (data->interrupt_index == IDT_SYSCALL)
     {
