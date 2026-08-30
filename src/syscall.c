@@ -6,11 +6,22 @@
 
 #include "print.h"
 
+#include "drivers/keyboard.h"
+
 syscall_t syscall;
 
 int32_t syscall_open()
 {
     const char* path = (const char*)SYSCALL_GET_PARAMETER(0);
+
+    // gotta get that /dev sorted out soon ish
+    if (strcmp(path, "/dev/keyboard") == 0)
+    {
+        size_t index = 0;
+        resource_result_t result = keyboard_open(SYSCALL_TASK, &index);
+        if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
+        return index;
+    }
 
     vfs_node_t* node = NULL;
     resource_result_t result = vfs_resolve(&vfs, path, &node);
@@ -32,10 +43,14 @@ int32_t syscall_close()
     resource_t* resource = SYSCALL_TASK->resources[resource_index];
     if (!resource) return -(int32_t)SYSCALL_RESULT_FAIL;
 
-    resource->operations.close(resource);
+    if (resource->operations.close != NULL) 
+    {
+        resource->operations.close(resource);
+    }
+
     resource_remove(SYSCALL_TASK, resource_index);
     
-    return 0;
+    return SYSCALL_RESULT_OK;
 }
 
 int32_t syscall_read()
@@ -52,10 +67,65 @@ int32_t syscall_read()
 
     size_t read_bytes = 0;
     // todo: passing 0 as offset. Gotta switch to system v abi soon (horrible stack parameters stuff)
+    if (resource->operations.read == NULL) return read_bytes;
+    
     resource_result_t result = resource->operations.read(resource, 0, buffer, length, &read_bytes);
+
+    if (result == RESOURCE_RESULT_WILL_BLOCK)
+    {
+        task_manager_block_task(&task_manager, SYSCALL_TASK, TASK_WAIT_REASON_IO, resource->data);
+        task_manager_yield_current(&task_manager);
+        
+        SYSCALL_TASK->syscall_retry = 1;
+
+        return -(int32_t)SYSCALL_RESULT_BUSY;
+    }
+
+    SYSCALL_TASK->syscall_retry = 0;
+
     if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
 
     return read_bytes;
+}
+
+int32_t syscall_write()
+{
+    uint32_t resource_index = (uint32_t)SYSCALL_GET_PARAMETER(0);
+    void* buffer = (void*)SYSCALL_GET_PARAMETER(1);
+    size_t length = (size_t)SYSCALL_GET_PARAMETER(2);
+
+    syscall_execution_state_write_t* write_state = &SYSCALL_TASK->syscall_execution_state.write;
+    if (!SYSCALL_TASK->syscall_retry)
+    {
+        write_state->offset = 0;
+    }
+
+    if (SYSCALL_TASK->task_is_user && (uintptr_t)buffer >= KERNEL_VIRTUAL_SPACE_START) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    if (resource_index >= TASK_MAX_RESOURCES) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+
+    resource_t* resource = SYSCALL_TASK->resources[resource_index];
+    if (!resource) return -(int32_t)SYSCALL_RESULT_FAIL;
+
+    size_t written_bytes = 0;
+
+    if (resource->operations.write == NULL) return written_bytes;
+    
+    resource_result_t result = resource->operations.write(resource, buffer + write_state->offset, length - write_state->offset, &written_bytes);
+    write_state->offset += written_bytes;
+
+    if (result == RESOURCE_RESULT_WILL_BLOCK)
+    {
+        task_manager_block_task(&task_manager, SYSCALL_TASK, TASK_WAIT_REASON_IO, resource);
+        task_manager_yield_current(&task_manager);
+        
+        SYSCALL_TASK->syscall_retry = 1;
+
+        return -(int32_t)SYSCALL_RESULT_BUSY;
+    }
+
+    if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
+
+    return written_bytes;
 }
 
 int32_t syscall_fork()
@@ -155,8 +225,11 @@ int32_t syscall_waitpid()
 int32_t syscall_print()
 {
     const char* message = (const char*)SYSCALL_GET_PARAMETER(0);
+    intptr_t parameter = SYSCALL_GET_PARAMETER(1);
 
-    printf("<task %d>: %s", SYSCALL_TASK->task_id, message);
+    if (parameter == 0) printf("<task %d>: %s", SYSCALL_TASK->task_id, message);
+    else printf(message, parameter);
+
     return 0;
 }
 
@@ -191,6 +264,11 @@ void syscall_handler(register_interrupt_data_t* data)
         case SYSCALL_READ:
         {
             data->eax = syscall_read();
+            break;
+        }
+        case SYSCALL_WRITE:
+        {
+            data->eax = syscall_write();
             break;
         }
         case SYSCALL_FORK:

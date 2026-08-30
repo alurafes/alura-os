@@ -15,10 +15,12 @@ typedef enum resource_result_t {
     RESOURCE_RESULT_STILL_IN_USE,
     RESOURCE_RESULT_ALLOCATION_ERROR,
     RESOURCE_RESULT_NO_FREE_SLOTS,
+    RESOURCE_RESULT_WILL_BLOCK,
 } resource_result_t;
 
 typedef enum resource_type_t {
-    RESOURCE_TYPE_FILE = 0
+    RESOURCE_TYPE_FILE = 0,
+    RESOURCE_TYPE_KEYBOARD,
 } resource_type_t;
 
 typedef struct resource_t resource_t;
@@ -26,6 +28,7 @@ typedef struct resource_t resource_t;
 typedef struct resource_operations_t {
     resource_result_t (*close)(resource_t* resource);
     resource_result_t (*read)(resource_t* resource, size_t offset, void* buffer, size_t length, size_t* read_bytes);
+    resource_result_t (*write)(resource_t* resource, void* buffer, size_t length, size_t* written_bytes);
 } resource_operations_t;
 
 typedef struct resource_t {

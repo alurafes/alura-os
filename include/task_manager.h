@@ -83,6 +83,7 @@ typedef struct task_t {
     int32_t return_code;
     uint8_t yield;
     syscall_execution_t syscall_execution;
+    syscall_execution_state_t syscall_execution_state;
     task_wait_reason_t wait_reason;
     void* wait_object;
 } task_t;

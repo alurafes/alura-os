@@ -2,68 +2,37 @@
 
 #include "print.h"
 
-// todo: switch to a keycode system or something like that. Hardcoding latin for now
-static const char keyboard_map[128] =
+resource_result_t keyboard_read(resource_t* resource, size_t offset, void* buffer, size_t length, size_t* read_bytes)
 {
-    0,
-    0,
-    '1','2','3','4','5','6','7','8','9','0',
-    '-','=',
-    '\b',
-    '\t',
-    'q','w','e','r','t','y','u','i','o','p',
-    '[',']',
-    '\n',
-    0,
-    'a','s','d','f','g','h','j','k','l',
-    ';','\'','`',
-    0,
-    '\\',
-    'z','x','c','v','b','n','m',
-    ',', '.', '/',
-    0,
-    '*',
-    0,
-    ' ',
-};
+    keyboard_t* keyboard = (keyboard_t*)resource->data;
 
-static const char keyboard_map_shift[128] =
-{
-    0,
-    0,
-    '!','@','#','$','%','^','&','*','(',')',
-    '_','+',
-    '\b',
-    '\t',
-    'Q','W','E','R','T','Y','U','I','O','P',
-    '{','}',
-    '\n',
-    0,
-    'A','S','D','F','G','H','J','K','L',
-    ':','"','~',
-    0,
-    '|',
-    'Z','X','C','V','B','N','M',
-    '<','>','?',
-    0,
-    '*',
-    0,
-    ' ',
-};
+    uint8_t* out = (uint8_t*)buffer;
+    size_t written = 0;
 
-char keyboard_translate(keyboard_t* keyboard, uint8_t scancode)
-{
-    if (scancode >= 128)
+    while (written < length && keyboard->buffer_count > 0)
     {
-        return 0;
+        out[written++] = keyboard->buffer[keyboard->buffer_tail];
+        keyboard->buffer_tail = (keyboard->buffer_tail + 1) % KEYBOARD_BUFFER_SIZE;
+        keyboard->buffer_count--;
     }
 
-    if (keyboard->special_state.shift)
+    if (written == 0)
     {
-        return keyboard_map_shift[scancode];
+        *read_bytes = 0;
+        return RESOURCE_RESULT_WILL_BLOCK;
     }
 
-    return keyboard_map[scancode];
+    *read_bytes = written;
+    return RESOURCE_RESULT_OK;
+}
+
+void keyboard_buffer_write(uint8_t scancode)
+{
+    if (keyboard.buffer_count == KEYBOARD_BUFFER_SIZE) return;
+
+    keyboard.buffer[keyboard.buffer_head] = scancode;
+    keyboard.buffer_head = (keyboard.buffer_head + 1) % KEYBOARD_BUFFER_SIZE;
+    keyboard.buffer_count++;
 }
 
 void keyboard_irq_handler(register_interrupt_data_t* data)
@@ -78,28 +47,33 @@ void keyboard_irq_handler(register_interrupt_data_t* data)
         case 42: // left shift
         case 54: // right shift
             keyboard.special_state.shift = !released;
-            return;
+            break;
 
         case 29: // ctrl
             keyboard.special_state.ctrl = !released;
-            return;
+            break;
 
         case 56: // alt
             keyboard.special_state.alt = !released;
-            return;
+            break;
     }
 
-    if (released)
-    {
-        return;
-    }
-    
-    char character = keyboard_translate(&keyboard, scancode);
-    printf("%c", character);
+    keyboard_buffer_write(scancode);
+    task_manager_wake_blocked_on(&task_manager, TASK_WAIT_REASON_IO, &keyboard);
 }
 
 keyboard_t keyboard;
 void keyboard_driver_init()
 {
     irq_register_handler(&irq, 1, keyboard_irq_handler);
+}
+
+resource_operations_t keyboard_operations = {
+    .read = keyboard_read
+};
+
+
+resource_result_t keyboard_open(task_t* task, size_t* result)
+{
+    return resource_register(task, RESOURCE_TYPE_KEYBOARD, &keyboard, &keyboard_operations, result);
 }
