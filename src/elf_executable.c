@@ -2,7 +2,7 @@
 
 #include "print.h"
 
-elf_result_t elf_load_into_task(task_t* task, const char* path)
+elf_result_t elf_load_into_task(task_t* task, const char* path, char* const argv[])
 {
     if (!path) return ELF_RESULT_BAD_PARAMETER;
 
@@ -52,7 +52,7 @@ elf_result_t elf_load_into_task(task_t* task, const char* path)
     page_entry_t* current_page_directory_phys = memory_paging_get_current_page_directory_physical();
     page_entry_t* new_task_page_directory = (page_entry_t*)bounce_alloc((uintptr_t)new_task_page_directory_phys);
     uint32_t new_task_esp = 0;
-    task_manager_prepare_new_stack(new_task_page_directory, task->task_is_user, header.e_entry, &new_task_esp);
+    task_manager_prepare_new_stack_with_args(new_task_page_directory, task->task_is_user, header.e_entry, argv, &new_task_esp);
 
     for (size_t i = 0; i < header.e_phnum; ++i)
     {
@@ -157,9 +157,9 @@ elf_result_t elf_load_into_task(task_t* task, const char* path)
     return ELF_RESULT_OK;
 }
 
-elf_result_t elf_load_and_execute(const char *path, task_t** task)
+elf_result_t elf_load_and_execute(const char *path, char* const argv[], task_t** task)
 {
     task_t* created_task = task_manager_task_create(&task_manager, NULL, 1, 1);
     if (task) *task = created_task;
-    return elf_load_into_task(created_task, path);
+    return elf_load_into_task(created_task, path, argv);
 }

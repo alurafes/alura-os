@@ -60,26 +60,19 @@ task_manager_result_t task_manager_remove_task_from_queue(task_manager_t* task_m
     return TASK_MANAGER_RESULT_QUEUE_TASK_NOT_FOUND;
 }
 
-task_manager_result_t task_manager_prepare_new_stack(page_entry_t* task_page_directory, uint8_t task_is_user, uint32_t eip, uint32_t* out_esp)
+task_manager_result_t task_manager_prepare_new_stack(page_entry_t* task_page_directory, uint8_t task_is_user, uint32_t eip, uint32_t user_esp, uint32_t* out_esp)
 {
     void* kernel_stack_phys = memory_bitmap_allocate();
 
     memory_paging_map(task_page_directory, (uint32_t)kernel_stack_phys, KERNEL_STACK_TOP - PAGE_SIZE, PAGE_READ_WRITE);
 
     uintptr_t task_stack_base = (uintptr_t)bounce_alloc((uintptr_t)kernel_stack_phys);
-
-    if (task_is_user)
-    {
-        void* user_stack_phys = memory_bitmap_allocate();
-        memory_paging_map(task_page_directory, (uint32_t)user_stack_phys, USER_STACK_TOP - PAGE_SIZE, PAGE_USER | PAGE_READ_WRITE);
-    }
-
     uint32_t* task_stack_top = (uint32_t*)(task_stack_base + PAGE_SIZE);
 
     if (task_is_user)
     {
         *--task_stack_top = TASK_MANAGER_USER_DATA_SELECTOR;
-        *--task_stack_top = USER_STACK_TOP;
+        *--task_stack_top = user_esp;
     }
 
     *--task_stack_top = 0x202; // eflags
@@ -128,7 +121,7 @@ task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(voi
     
     page_entry_t* task_page_directory = bounce_alloc(task->task_cr3);
 
-    task_manager_result_t result = task_manager_prepare_new_stack(task_page_directory, task_is_user, (uint32_t)entry, &task->task_esp);
+    task_manager_result_t result = task_manager_prepare_new_stack_with_args(task_page_directory, task_is_user, (uint32_t)entry, NULL, &task->task_esp);
     if (result != TASK_MANAGER_RESULT_OK)
     {
         // todo
@@ -479,4 +472,73 @@ void task_manager_destroy_task(task_manager_t* task_manager, task_t* task)
     }
 
     kernel_heap_free(task);
+}
+
+uint32_t task_manager_count_arguments(char* const args[])
+{
+    if (!args) return 0;
+    uint32_t count = 0;
+    while (args[count] != NULL) count++;
+    return count;
+}
+
+void* task_manager_map_user_stack(page_entry_t* task_page_directory)
+{
+    void* user_stack_phys = memory_bitmap_allocate();
+    if (!user_stack_phys) return NULL;
+    memory_paging_map(task_page_directory, (uint32_t)user_stack_phys, USER_STACK_TOP - PAGE_SIZE, PAGE_USER | PAGE_READ_WRITE);
+    return user_stack_phys;
+}
+
+
+task_manager_result_t task_manager_build_arguments_on_stack(void* user_stack_phys, char* const argv[], uint32_t* out_user_esp)
+{
+    uint32_t argc = task_manager_count_arguments(argv);
+    uint32_t argv_addresses[TASK_MAX_ARGUMENTS];
+
+    uint8_t* page = (uint8_t*)bounce_alloc((uintptr_t)user_stack_phys);
+    uint32_t page_base_user = USER_STACK_TOP - PAGE_SIZE;
+    uint8_t* cursor = page + PAGE_SIZE;
+
+    for (int32_t i = (int32_t)argc - 1; i >= 0; i--)
+    {
+        size_t len = strlen(argv[i]) + 1;
+        cursor -= len;
+        memcpy(cursor, argv[i], len);
+        argv_addresses[i] = page_base_user + (uint32_t)(cursor - page);
+    }
+
+    cursor = (uint8_t*)((uintptr_t)cursor & ~0x3u); // string can be any length, gotta align
+    uint32_t needed = 4 + (argc + 1) * 4;
+    if ((uint32_t)(cursor - page) < needed)
+    {
+        bounce_free((uintptr_t)page);
+        return TASK_MANAGER_RESULT_ARGS_TOO_LARGE;
+    }
+    
+    uint32_t* word_cursor = (uint32_t*)cursor;
+    *--word_cursor = 0; // argv NULL terminator
+    for (int32_t i = (int32_t)argc - 1; i >= 0; --i) *--word_cursor = argv_addresses[i];
+    *--word_cursor = argc;
+
+    *out_user_esp = page_base_user + (uint32_t)((uint8_t*)word_cursor - page);
+
+    bounce_free((uintptr_t)page);
+    return TASK_MANAGER_RESULT_OK;
+}
+
+task_manager_result_t task_manager_prepare_new_stack_with_args(page_entry_t* task_page_directory, uint8_t task_is_user, uint32_t eip, char* const argv[], uint32_t* out_esp)
+{
+    uint32_t user_esp = USER_STACK_TOP;
+
+    if (task_is_user)
+    {
+        void* user_stack_phys = task_manager_map_user_stack(task_page_directory);
+        if (!user_stack_phys) return TASK_MANAGER_RESULT_OUT_OF_MEMORY;
+
+        task_manager_result_t args_result = task_manager_build_arguments_on_stack(user_stack_phys, argv, &user_esp);
+        if (args_result != TASK_MANAGER_RESULT_OK) return args_result;
+    }
+
+    return task_manager_prepare_new_stack(task_page_directory, task_is_user, eip, user_esp, out_esp);
 }

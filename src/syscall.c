@@ -144,8 +144,15 @@ int32_t syscall_fork()
 int32_t syscall_execve()
 {
     const char* path = (const char*)SYSCALL_GET_PARAMETER(0);
+    char* const* argv = (char* const*)SYSCALL_GET_PARAMETER(1);
 
-    elf_load_into_task(SYSCALL_TASK, path);
+    if (SYSCALL_TASK->task_is_user)
+    {
+        if ((uintptr_t)path >= KERNEL_VIRTUAL_SPACE_START) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+        if (argv != NULL && (uintptr_t)argv >= KERNEL_VIRTUAL_SPACE_START) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    }
+
+    if (elf_load_into_task(SYSCALL_TASK, path, argv) != ELF_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
     return SYSCALL_RESULT_OK;
 }
 
@@ -283,9 +290,16 @@ void syscall_handler(register_interrupt_data_t* data)
         }
         case SYSCALL_EXECVE:
         {
-            syscall_execve();
-            data->useresp = syscall.caller_task->task_esp;
-            data->eip = syscall.caller_task->task_init_eip;
+            int32_t syscall_result = syscall_execve();
+            if (syscall_result == SYSCALL_RESULT_OK)
+            {
+                data->useresp = syscall.caller_task->task_esp;
+                data->eip = syscall.caller_task->task_init_eip;
+            }
+            else
+            {
+                data->eax = syscall_result;
+            }
             break;
         }
         case SYSCALL_EXIT:

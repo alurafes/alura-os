@@ -42,7 +42,8 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
 
     keyboard_driver_init();
 
-    elf_load_and_execute("/bin/init.elf", &task_manager.task_init);
+    char* init_argv[] = { "/bin/init.elf", NULL };
+    elf_load_and_execute("/bin/init.elf", init_argv, &task_manager.task_init);
     keyboard_open(task_manager.task_init, NULL); // stdin
     terminal_open(task_manager.task_init, NULL); // stdout
     terminal_open(task_manager.task_init, NULL); // stderr

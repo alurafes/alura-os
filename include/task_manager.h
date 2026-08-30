@@ -24,6 +24,7 @@ typedef struct resource_t resource_t;
 #define TASK_MANAGER_USER_CODE_SELECTOR 0x1B
 #define TASK_MANAGER_USER_DATA_SELECTOR 0x23
 
+#define TASK_MAX_ARGUMENTS 64
 #define TASK_MAX_RESOURCES 512
 
 typedef enum task_manager_result_t {
@@ -31,6 +32,7 @@ typedef enum task_manager_result_t {
     TASK_MANAGER_RESULT_QUEUE_TASK_NOT_FOUND,
     TASK_MANAGER_RESULT_OUT_OF_MEMORY,
     TASK_MANAGER_RESULT_CHILD_NOT_FOUND,
+    TASK_MANAGER_RESULT_ARGS_TOO_LARGE,
 } task_manager_result_t;
 
 typedef enum task_state_t {
@@ -106,7 +108,10 @@ void task_manager_module_init();
 
 task_t* task_manager_task_create(task_manager_t* task_manager, void (*entry)(void), uint8_t task_is_user, uint8_t enqueue);
 task_t* task_manager_task_copy(task_manager_t* task_manager, task_t* parent, uint8_t enqueue);
-task_manager_result_t task_manager_prepare_new_stack(page_entry_t* task_page_directory, uint8_t task_is_user, uint32_t eip, uint32_t* out_esp);
+task_manager_result_t task_manager_prepare_new_stack(page_entry_t* task_page_directory, uint8_t task_is_user, uint32_t eip, uint32_t user_esp, uint32_t* out_esp);
+task_manager_result_t task_manager_build_arguments_on_stack(void* user_stack_phys, char* const argv[], uint32_t* out_user_esp);
+task_manager_result_t task_manager_prepare_new_stack_with_args(page_entry_t* task_page_directory, uint8_t task_is_user, uint32_t eip, char* const argv[], uint32_t* out_esp);
+
 task_manager_result_t task_manager_exit_task(task_manager_t* task_manager, task_t* task, int32_t return_code);
 void task_manager_destroy_task(task_manager_t* task_manager, task_t* task);
 task_manager_result_t task_manager_block_task(task_manager_t* task_manager, task_t* task, task_wait_reason_t wait_reason, void* wait_object);
