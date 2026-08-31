@@ -8,7 +8,7 @@ vga_result_t vga_set_color(vga_t* vga, vga_color_t color)
     return VGA_RESULT_OK;
 }
 
-void vga_put_char(display_driver_t* driver, char character, unsigned int x, unsigned int y)
+void vga_put_char(text_display_driver_t* driver, char character, unsigned int x, unsigned int y)
 {
     vga_t* vga = (vga_t*)driver;
     VGA_POINTER[VGA_WIDTH * y + x] = VGA_COLOR(vga->color) << 8 | character;
@@ -20,6 +20,7 @@ vga_result_t vga_create(vga_t* out)
     out->color.foreground = VGA_COLOR_WHITE;
     out->driver.put_char = vga_put_char;
     out->driver.set_cursor = vga_set_cursor;
+    out->driver.get_dimensions = vga_get_dimensions;
     return VGA_RESULT_OK;
 }
 
@@ -29,7 +30,7 @@ void vga_cursor_disable()
     io_outb(0x3D5, 0x20);
 }
 
-void vga_set_cursor(display_driver_t* driver, unsigned int x, unsigned int y)
+void vga_set_cursor(text_display_driver_t* driver, unsigned int x, unsigned int y)
 {
     vga_t* vga = (vga_t*)driver;
     
@@ -44,4 +45,12 @@ vga_t vga;
 void vga_driver_init()
 {
     vga_create(&vga);
+}
+
+void vga_get_dimensions(text_display_driver_t* driver, unsigned int* width, unsigned int* height)
+{
+    vga_t* vga = (vga_t*)driver;
+    
+    if (width != NULL) *width = VGA_WIDTH;
+    if (height != NULL) *height = VGA_HEIGHT;
 }

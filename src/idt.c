@@ -2,8 +2,6 @@
 
 #include "print.h"
 
-#include "drivers/vga.h"
-
 #include "syscall.h"
 
 idt_result_t idt_create(idt_t* idt)
@@ -43,7 +41,6 @@ void isr_handler(register_interrupt_data_t* data)
 {
     if (data->interrupt_index < PIC1_REMAPPED_VECTOR)
     {
-        vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_RED, .foreground = VGA_COLOR_BLACK});
         printf("\n\nException #%x: Error Code: %x\nRegisters:\ngs = %x, fs = %x, es = %x, ds = %x\nedi = %x, esi = %x, ebp = %x, ebx = %x, edx = %x, ecx = %x, eax = %x\neip = %x, cs = %x, eflags = %x, useresp = %x, ss = %x", 
             data->interrupt_index, 
             data->error_code, 
@@ -70,7 +67,6 @@ void isr_handler(register_interrupt_data_t* data)
             for(;;) asm("hlt");
         }
         printf("\n[terminating user task]\n");
-        vga_set_color(&vga, (vga_color_t){.background = VGA_COLOR_BLACK, .foreground = VGA_COLOR_WHITE});
         
         task_t* faulting_task = task_manager.task_current;
         if (faulting_task != NULL)

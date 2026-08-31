@@ -2,7 +2,7 @@
 #define ALURA_VGA_H
 
 #include <stdint.h>
-#include "display_driver.h"
+#include "text_display_driver.h"
 #include "io.h"
 
 #define VGA_BUFFER 0xC00B8000
@@ -39,15 +39,16 @@ typedef enum vga_result_t {
 } vga_result_t;
 
 typedef struct vga_t {
-    display_driver_t driver;
+    text_display_driver_t driver;
     vga_color_t color;
 } vga_t;
 
 vga_result_t vga_create(vga_t* out);
 vga_result_t vga_set_color(vga_t* vga, vga_color_t color);
-void vga_put_char(display_driver_t* driver, char character, unsigned int x, unsigned int y);
+void vga_put_char(text_display_driver_t* driver, char character, unsigned int x, unsigned int y);
 void vga_cursor_disable();
-void vga_set_cursor(display_driver_t* driver, unsigned int x, unsigned int y);
+void vga_set_cursor(text_display_driver_t* driver, unsigned int x, unsigned int y);
+void vga_get_dimensions(text_display_driver_t* driver, unsigned int* width, unsigned int* height);
 
 extern vga_t vga;
 void vga_driver_init();

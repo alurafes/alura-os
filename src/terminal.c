@@ -1,9 +1,18 @@
 #include "terminal.h"
 
+static char terminal_display_char(char character)
+{
+    switch (character) {
+        case '\n':
+            return ' ';
+    }
+    return character;
+}
+
 terminal_result_t terminal_set_cursor(terminal_t* terminal, terminal_point_t point)
 {
-    if (point.x < 0 || point.x >= TERMINAL_WIDTH ||
-        point.y < 0 || point.y >= TERMINAL_HEIGHT) 
+    if (point.x < 0 || point.x >= terminal->width ||
+        point.y < 0 || point.y >= terminal->height)
         {
             switch (terminal->overflow)
             {
@@ -14,16 +23,18 @@ terminal_result_t terminal_set_cursor(terminal_t* terminal, terminal_point_t poi
                 break;
             case TERMINAL_OVERFLOW_NEW_LINE:
                 point.x = 0;
-                if (point.y + 1 >= TERMINAL_HEIGHT)
+                if (point.y + 1 >= terminal->height)
                 {
                     terminal_scroll(terminal);
-                    point.y = TERMINAL_HEIGHT - 1;
+                    point.y = terminal->height - 1;
                 } else {
                     point.y += 1;
                 }
                 break;
             }
         }
+    char previous_character = terminal->buffer[terminal->cursor.y * terminal->width + terminal->cursor.x];
+    terminal->driver->put_char(terminal->driver, terminal_display_char(previous_character), terminal->cursor.x, terminal->cursor.y);
     terminal->cursor = point;
     terminal->driver->set_cursor(terminal->driver, terminal->cursor.x, terminal->cursor.y);
     return TERMINAL_RESULT_OK;
@@ -33,19 +44,20 @@ terminal_result_t terminal_put_char(terminal_t* terminal, char character)
 {
     switch (character) {
         case '\n': {
-            terminal->buffer[terminal->cursor.y * TERMINAL_WIDTH + terminal->cursor.x] = character;
+            terminal->buffer[terminal->cursor.y * terminal->width + terminal->cursor.x] = character;
             terminal_set_cursor(terminal, (terminal_point_t){0, terminal->cursor.y + 1});
             return TERMINAL_RESULT_OK;
         }
         case '\b': {
             if (terminal->cursor.x == 0) return TERMINAL_RESULT_OK;
-            terminal_set_cursor(terminal, (terminal_point_t){terminal->cursor.x - 1, terminal->cursor.y});
-            terminal->buffer[terminal->cursor.y * TERMINAL_WIDTH + terminal->cursor.x] = ' ';
-            terminal->driver->put_char(terminal->driver, ' ', terminal->cursor.x, terminal->cursor.y);
+            terminal_point_t previous_point = {terminal->cursor.x - 1, terminal->cursor.y};
+            terminal->buffer[previous_point.y * terminal->width + previous_point.x] = ' ';
+            terminal->driver->put_char(terminal->driver, ' ', previous_point.x, previous_point.y);
+            terminal_set_cursor(terminal, previous_point);
             return TERMINAL_RESULT_OK;
         }
     }
-    terminal->buffer[terminal->cursor.y * TERMINAL_WIDTH + terminal->cursor.x] = character;
+    terminal->buffer[terminal->cursor.y * terminal->width + terminal->cursor.x] = character;
     terminal->driver->put_char(terminal->driver, character, terminal->cursor.x, terminal->cursor.y);
     terminal_point_t next_point = {
         .x = terminal->cursor.x + 1,
@@ -79,42 +91,37 @@ terminal_result_t terminal_set_scroll(terminal_t* terminal, terminal_scroll_t sc
 
 terminal_result_t terminal_scroll(terminal_t* terminal)
 {
-    for (int y = 1; y < TERMINAL_HEIGHT; ++y)
+    for (int y = 1; y < terminal->height; ++y)
     {
-        for (int x = 0; x < TERMINAL_WIDTH; ++x)
+        for (int x = 0; x < terminal->width; ++x)
         {
-            terminal->buffer[(y - 1) * TERMINAL_WIDTH + x] = terminal->buffer[y * TERMINAL_WIDTH + x];
+            terminal->buffer[(y - 1) * terminal->width + x] = terminal->buffer[y * terminal->width + x];
         }
     }
-    for (int x = 0; x < TERMINAL_WIDTH; ++x)
+    for (int x = 0; x < terminal->width; ++x)
     {
-        terminal->buffer[(TERMINAL_HEIGHT - 1) * TERMINAL_WIDTH + x] = 0x0;
+        terminal->buffer[(terminal->height - 1) * terminal->width + x] = 0x0;
     }
     return terminal_render(terminal);
 }
 
 terminal_result_t terminal_render(terminal_t* terminal)
 {
-    for (int y = 0; y < TERMINAL_HEIGHT; ++y)
+    for (int y = 0; y < terminal->height; ++y)
     {
-        for (int x = 0; x < TERMINAL_WIDTH; ++x)
+        for (int x = 0; x < terminal->width; ++x)
         {
-            char character = terminal->buffer[y * TERMINAL_WIDTH + x];
-            switch (character) {
-                case '\n': {
-                    character = 0x20;
-                }
-            }
+            char character = terminal_display_char(terminal->buffer[y * terminal->width + x]);
             terminal->driver->put_char(terminal->driver, character, x, y);
         }
     }
     return TERMINAL_RESULT_OK;
 }
 
-terminal_result_t terminal_create(terminal_t* out, display_driver_t* driver)
+terminal_result_t terminal_create(terminal_t* out, text_display_driver_t* driver)
 {
     terminal_t t = {
-        .buffer = {0},
+        .buffer = NULL,
         .cursor = {
             .x = 0,
             .y = 0
@@ -123,13 +130,15 @@ terminal_result_t terminal_create(terminal_t* out, display_driver_t* driver)
         .overflow = TERMINAL_OVERFLOW_NEW_LINE,
         .scroll = TERMINAL_SCROLL_VERTICAL
     };
+    driver->get_dimensions(driver, &t.width, &t.height);
+    t.buffer = kernel_heap_calloc(sizeof(char) * t.width * t.height);
     terminal_render(&t);
     *out = t;
     return TERMINAL_RESULT_OK;
 }
 
 terminal_t terminal;
-void terminal_module_init(display_driver_t* driver)
+void terminal_module_init(text_display_driver_t* driver)
 {
     terminal_create(&terminal, driver);
 }
