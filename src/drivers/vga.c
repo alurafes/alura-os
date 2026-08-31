@@ -41,7 +41,7 @@ void vga_set_cursor(display_driver_t* driver, unsigned int x, unsigned int y)
 }
 
 vga_t vga;
-void vga_module_init()
+void vga_driver_init()
 {
     vga_create(&vga);
 }

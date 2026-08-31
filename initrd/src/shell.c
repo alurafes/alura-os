@@ -111,6 +111,12 @@ static void run_command(int fd, char* line)
     int argc = parse_args(line, argv);
     if (argc == 0) return;
 
+    if (str_eq(argv[0], "exit"))
+    {
+        exit(0);
+        return;
+    }
+
     int pid = fork();
     if (pid == 0)
     {

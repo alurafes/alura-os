@@ -81,7 +81,7 @@ memory_paging_result_t memory_paging_map_kernel(uint32_t physical_address, uint3
         page_entry_t* new_page_table_entry = (page_entry_t*)memory_bitmap_allocate();
         if (new_page_table_entry == NULL) return MEMORY_PAGING_RESULT_ALLOCATION_ERROR;
 
-        page_entry_t* new_page_table_entry_virtual = (page_entry_t*)physical_to_virtual(new_page_table_entry);
+        page_entry_t* new_page_table_entry_virtual = (page_entry_t*)kernel_low_physical_to_virtual(new_page_table_entry);
         memory_paging_reset_entry(new_page_table_entry_virtual);
         kernel_page_directory[page_directory_index] = ((uint32_t)new_page_table_entry) | flags | PAGE_PRESENT;
     }
@@ -90,7 +90,7 @@ memory_paging_result_t memory_paging_map_kernel(uint32_t physical_address, uint3
         kernel_page_directory[page_directory_index] |= PAGE_USER;
     }
     page_entry_t* page_table = (page_entry_t*)(kernel_page_directory[page_directory_index] & PAGE_MASK);
-    page_entry_t* page_table_virtual = (page_entry_t*)physical_to_virtual(page_table);
+    page_entry_t* page_table_virtual = (page_entry_t*)kernel_low_physical_to_virtual(page_table);
     
     page_table_virtual[page_table_index] = (physical_address) | flags | PAGE_PRESENT;
 
@@ -99,9 +99,23 @@ memory_paging_result_t memory_paging_map_kernel(uint32_t physical_address, uint3
     return MEMORY_PAGING_RESULT_OK;
 }
 
+uintptr_t memory_paging_map_physical_range(uintptr_t physical_address, size_t size, uintptr_t virtual_address_base, uint32_t flags)
+{
+    uintptr_t physical_page_start = ALIGN_DOWN(physical_address);
+    uintptr_t physical_offset = physical_address - physical_page_start;
+    size_t total_size = ALIGN_UP(size + physical_offset);
+
+    for (uintptr_t offset = 0; offset < total_size; offset += PAGE_SIZE)
+    {
+        memory_paging_map_kernel(physical_page_start + offset, virtual_address_base + offset, flags);
+    }
+
+    return virtual_address_base + physical_offset;
+}
+
 void memory_paging_map_higher_half()
 {
-    for (uint32_t offset = 0; offset < KERNEL_MAPPINGS_END - KERNEL_MAPPINGS_START; offset += PAGE_SIZE)
+    for (uint32_t offset = 0; offset < KERNEL_LOW_WINDOW_SIZE; offset += PAGE_SIZE)
     {
         memory_paging_map_kernel(offset, KERNEL_VIRTUAL_SPACE_START + offset, PAGE_READ_WRITE);
     }

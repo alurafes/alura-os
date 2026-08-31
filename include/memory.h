@@ -9,15 +9,16 @@ extern char _kernel_physical_end;
 #define PAGE_SIZE 4096
 
 #define KERNEL_VIRTUAL_SPACE_START 0xC0000000
-#define KERNEL_VIRTUAL_SPACE_END 0xEFFFFFFF
+#define KERNEL_LOW_WINDOW_SIZE 0x04000000
+#define KERNEL_VIRTUAL_SPACE_END (KERNEL_VIRTUAL_SPACE_START + KERNEL_LOW_WINDOW_SIZE - 1)
 
 #define KERNEL_HEAP_VIRTUAL_START 0xF0000000
 #define KERNEL_HEAP_VIRTUAL_END 0xF7FFFFFF
 
-#define KERNEL_MAPPINGS_START 0xF8000000
-#define KERNEL_MAPPINGS_END 0xFFFFFFFF
+#define KERNEL_FRAMEBUFFER_VIRTUAL_START 0xF8000000
+#define KERNEL_FRAMEBUFFER_VIRTUAL_END 0xF8FFFFFF
 
-#define KERNEL_BOUNCE_PAGE_START 0xFFE00000
+#define KERNEL_BOUNCE_PAGE_START 0xFFB00000
 #define KERNEL_BOUNCE_PAGE_SIZE 16
 
 #define USER_STACK_TOP 0xBFFFE000
@@ -28,12 +29,11 @@ extern char _kernel_physical_end;
 #define ALIGN_UP(value) (ALIGN_UP_TO_SPECIFIC_PAGE(value, PAGE_SIZE))
 #define ALIGN_DOWN(value) (ALIGN_DOWN_TO_SPECIFIC_PAGE(value, PAGE_SIZE))
 
-
-static inline uintptr_t physical_to_virtual(void* physical_address) {
+static inline uintptr_t kernel_low_physical_to_virtual(void* physical_address) {
     return (uintptr_t)physical_address + KERNEL_VIRTUAL_SPACE_START;
 }
 
-static inline uintptr_t virtual_to_physical(void* virtual_address) {
+static inline uintptr_t kernel_low_virtual_to_physical(void* virtual_address) {
     return (uintptr_t)virtual_address - KERNEL_VIRTUAL_SPACE_START;
 }
 

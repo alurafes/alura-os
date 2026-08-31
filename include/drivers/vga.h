@@ -50,6 +50,6 @@ void vga_cursor_disable();
 void vga_set_cursor(display_driver_t* driver, unsigned int x, unsigned int y);
 
 extern vga_t vga;
-void vga_module_init();
+void vga_driver_init();
 
 #endif // ALURA_VGA_H

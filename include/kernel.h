@@ -22,6 +22,7 @@
 
 #include "drivers/vga.h"
 #include "drivers/keyboard.h"
+#include "drivers/framebuffer.h"
 
 #include <stdint.h>
 #include <stddef.h>

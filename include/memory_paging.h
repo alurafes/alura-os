@@ -34,6 +34,8 @@ void* bounce_alloc(uintptr_t physical_address);
 void bounce_free(uintptr_t virtual_address);
 
 void memory_paging_set(page_entry_t* page_directory_physical);
+memory_paging_result_t memory_paging_map_kernel(uint32_t physical_address, uint32_t virtual_address, uint32_t flags);
+uintptr_t memory_paging_map_physical_range(uintptr_t physical_address, size_t size, uintptr_t virtual_address_base, uint32_t flags);
 memory_paging_result_t memory_paging_create_kernel_page_directory();
 memory_paging_result_t memory_paging_create_page_directory(uint32_t* result);
 memory_paging_result_t memory_paging_copy_mapped_memory(page_entry_t* dst);

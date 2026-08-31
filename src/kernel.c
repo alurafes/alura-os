@@ -27,7 +27,7 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     memory_bitmap_module_init(multiboot);
     memory_paging_module_init();
     kernel_heap_module_init();
-    vga_module_init();
+    vga_driver_init();
     terminal_module_init(&vga.driver);
     gdt_module_init();
     tss_module_init();
@@ -37,7 +37,9 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     timer_module_init();
     task_manager_module_init();
 
-    ramfs_driver_init((multiboot_info_t*)physical_to_virtual((void*)multiboot));
+    multiboot_info_t* multiboot_virtual = (multiboot_info_t*)kernel_low_physical_to_virtual((void*)multiboot);
+    framebuffer_driver_init(multiboot_virtual);
+    ramfs_driver_init(multiboot_virtual);
     vfs_module_init();
 
     keyboard_driver_init();

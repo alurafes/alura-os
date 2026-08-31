@@ -48,10 +48,28 @@ void ramfs_driver_init(multiboot_info_t* multiboot)
     ramfs.last_index = 0;
 
     multiboot_module_t* mods = (multiboot_module_t*)multiboot->mods_addr;
-    multiboot_module_t* initrd = (multiboot_module_t*)physical_to_virtual(&mods[0]);
-        
-    void* tar_data = (void*)physical_to_virtual((void*)initrd->mod_start);
-    size_t tar_size = initrd->mod_end - initrd->mod_start;
+    multiboot_module_t* initrd = (multiboot_module_t*)kernel_low_physical_to_virtual(&mods[0]);
+
+    uintptr_t mod_start = initrd->mod_start;
+    uintptr_t mod_end = initrd->mod_end;
+    size_t tar_size = mod_end - mod_start;
+
+    void* tar_data = kernel_heap_malloc(tar_size);
+    size_t copied = 0;
+    for (uintptr_t page = ALIGN_DOWN(mod_start); page < mod_end; page += PAGE_SIZE)
+    {
+        void* bounce = bounce_alloc(page);
+
+        uintptr_t chunk_start = (page < mod_start) ? mod_start : page;
+        uintptr_t chunk_end = (page + PAGE_SIZE > mod_end) ? mod_end : page + PAGE_SIZE;
+        size_t chunk_len = chunk_end - chunk_start;
+
+        memcpy((uint8_t*)tar_data + copied, (uint8_t*)bounce + (chunk_start - page), chunk_len);
+        copied += chunk_len;
+
+        bounce_free((uintptr_t)bounce);
+        memory_bitmap_free((void*)page);
+    }
 
     ramfs.root_node = tar_create_ramfs_node(tar_data, tar_size);
 }
