@@ -51,5 +51,9 @@ ramfs_result_t ramfs_create_path(ramfs_node_t* root, char* path, vfs_node_type t
 resource_result_t ramfs_lookup(vfs_node_t* directory, const char* path, vfs_node_t** result);
 resource_result_t ramfs_readdir(vfs_node_t* directory, size_t index, vfs_dir_t* entry);
 resource_result_t ramfs_read(vfs_node_t* file, size_t offset, void* buffer, size_t length, size_t* read_bytes);
+resource_result_t ramfs_write(vfs_node_t* file, size_t offset, void* buffer, size_t length, size_t* written_bytes);
+resource_result_t ramfs_size(vfs_node_t* file, size_t* out_size);
+resource_result_t ramfs_create(vfs_node_t* directory, const char* name, vfs_node_type type, vfs_node_t** result);
+resource_result_t ramfs_truncate(vfs_node_t* file);
 
 #endif // ALURA_FS_RAMFS_H

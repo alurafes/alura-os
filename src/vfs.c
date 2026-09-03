@@ -5,7 +5,8 @@
 
 resource_operations_t vfs_operations = {
     .close = vfs_close,
-    .read = vfs_read
+    .read = vfs_read,
+    .write = vfs_write
 };
 
 vfs_t vfs;
@@ -21,6 +22,62 @@ resource_result_t vfs_readdir(vfs_node_t* directory, size_t index, vfs_dir_t* en
     if (!directory) return RESOURCE_RESULT_INVALID;
     if (!directory->operations.readdir) return RESOURCE_RESULT_BAD_PARAMETER;
     return directory->operations.readdir(directory, index, entry);
+}
+
+resource_result_t vfs_get_size(vfs_node_t* node, size_t* out_size)
+{
+    if (!node || !out_size) return RESOURCE_RESULT_BAD_PARAMETER;
+    if (!node->operations.size) return RESOURCE_RESULT_BAD_PARAMETER;
+    return node->operations.size(node, out_size);
+}
+
+resource_result_t vfs_truncate(vfs_node_t* node)
+{
+    if (!node) return RESOURCE_RESULT_BAD_PARAMETER;
+    if (node->type != VFS_NODE_TYPE_FILE) return RESOURCE_RESULT_INVALID;
+    if (!node->operations.truncate) return RESOURCE_RESULT_BAD_PARAMETER;
+    return node->operations.truncate(node);
+}
+
+resource_result_t vfs_create(vfs_t* vfs, const char* path, vfs_node_type type, vfs_node_t** result)
+{
+    if (!vfs || !path || !result) return RESOURCE_RESULT_BAD_PARAMETER;
+
+    char path_copy[VFS_NODE_NAME_LENGTH];
+    strncpy(path_copy, path, VFS_NODE_NAME_LENGTH - 1);
+    path_copy[VFS_NODE_NAME_LENGTH - 1] = '\0';
+
+    char* last_slash = strrchr(path_copy, '/');
+    char* name = path_copy;
+    const char* parent_path = "/";
+
+    if (last_slash)
+    {
+        *last_slash = '\0';
+        name = last_slash + 1;
+        if (path_copy[0] != '\0') parent_path = path_copy;
+    }
+
+    if (*name == '\0') return RESOURCE_RESULT_BAD_PARAMETER;
+
+    vfs_node_t* parent = NULL;
+    resource_result_t resolve_result = vfs_resolve(vfs, parent_path, &parent);
+    if (resolve_result != RESOURCE_RESULT_OK) return resolve_result;
+
+    if (parent->type != VFS_NODE_TYPE_DIRECTORY || !parent->operations.create)
+    {
+        vfs_release_node(parent);
+        return RESOURCE_RESULT_BAD_PARAMETER;
+    }
+
+    vfs_node_t* child = NULL;
+    resource_result_t create_result = parent->operations.create(parent, name, type, &child);
+    vfs_release_node(parent);
+    if (create_result != RESOURCE_RESULT_OK) return create_result;
+
+    vfs_lock_node(child);
+    *result = child;
+    return RESOURCE_RESULT_OK;
 }
 
 resource_result_t vfs_resolve(vfs_t* vfs, const char* path, vfs_node_t** result)
@@ -224,4 +281,15 @@ resource_result_t vfs_read(resource_t* resource, size_t offset, void* buffer, si
     if (node->type != VFS_NODE_TYPE_FILE) return RESOURCE_RESULT_INVALID;
 
     return node->operations.read(node, offset, buffer, length, read_bytes);
+}
+
+resource_result_t vfs_write(resource_t* resource, size_t offset, void* buffer, size_t length, size_t* written_bytes)
+{
+    if (!resource || !buffer || !length || !written_bytes) return RESOURCE_RESULT_BAD_PARAMETER;
+    vfs_node_t* node = resource->data;
+
+    if (node->type != VFS_NODE_TYPE_FILE) return RESOURCE_RESULT_INVALID;
+    if (!node->operations.write) return RESOURCE_RESULT_BAD_PARAMETER;
+
+    return node->operations.write(node, offset, buffer, length, written_bytes);
 }

@@ -10,10 +10,24 @@
 #define SYSCALL_EXIT 6
 #define SYSCALL_WAITPID 7
 #define SYSCALL_SBRK 8
-#define SYSCALL_DEBUG_PRINT 10
+#define SYSCALL_ISATTY 9
+#define SYSCALL_GETPID 10
+#define SYSCALL_LSEEK 11
 
 #define STDIN 0
 #define STDOUT 1
+
+#define SEEK_SET 0
+#define SEEK_CUR 1
+#define SEEK_END 2
+
+#define O_RDONLY 0x0000
+#define O_WRONLY 0x0001
+#define O_RDWR   0x0002
+#define O_APPEND 0x0008
+#define O_CREAT  0x0200
+#define O_TRUNC  0x0400
+#define O_EXCL   0x0800
 
 static inline int syscall0(int n)
 {
@@ -43,7 +57,7 @@ static inline int syscall3(int n, int a1, int a2, int a3)
     return ret;
 }
 
-int open(const char* path);
+int open(const char* path, int flags);
 int close(int fd);
 int read(int fd, void* buf, unsigned int len);
 int write(int fd, const void* buf, unsigned int len);
@@ -52,6 +66,8 @@ int execve(const char* path, char* const argv[]);
 void exit(int code) __attribute__((noreturn));
 int waitpid(int pid, int* status);
 void* sbrk(int increment);
-int debug_print(const char* msg, int arg);
+int isatty(int fd);
+int getpid(void);
+int lseek(int fd, int offset, int whence);
 
 #endif

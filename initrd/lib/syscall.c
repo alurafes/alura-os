@@ -1,7 +1,7 @@
 #include "syscall.h"
 
-int open(const char* path) {
-    return syscall1(SYSCALL_OPEN, (int)path);
+int open(const char* path, int flags) {
+    return syscall2(SYSCALL_OPEN, (int)path, flags);
 }
 
 int close(int resource) {
@@ -38,6 +38,14 @@ void* sbrk(int increment) {
     return (void*)syscall1(SYSCALL_SBRK, increment);
 }
 
-int debug_print(const char* msg, int arg) {
-    return syscall2(SYSCALL_DEBUG_PRINT, (int)msg, arg);
+int isatty(int fd) {
+    return syscall1(SYSCALL_ISATTY, fd);
+}
+
+int getpid(void) {
+    return syscall0(SYSCALL_GETPID);
+}
+
+int lseek(int fd, int offset, int whence) {
+    return syscall3(SYSCALL_LSEEK, fd, offset, whence);
 }

@@ -4,5 +4,6 @@ build/**/*.o
 build/**/*.elf
 .vscode
 .vscode/**
+**/*.o
 **/*.elf
 **/.DS_Store

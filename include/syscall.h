@@ -17,6 +17,21 @@
 #define SYSCALL_EXIT 6
 #define SYSCALL_WAITPID 7
 #define SYSCALL_SBRK 8
+#define SYSCALL_ISATTY 9
+#define SYSCALL_GETPID 10
+#define SYSCALL_LSEEK 11
+
+#define SYSCALL_LSEEK_SET 0
+#define SYSCALL_LSEEK_CUR 1
+#define SYSCALL_LSEEK_END 2
+
+#define SYSCALL_O_RDONLY 0x0000
+#define SYSCALL_O_WRONLY 0x0001
+#define SYSCALL_O_RDWR   0x0002
+#define SYSCALL_O_APPEND 0x0008
+#define SYSCALL_O_CREAT  0x0200
+#define SYSCALL_O_TRUNC  0x0400
+#define SYSCALL_O_EXCL   0x0800
 
 #define SYSCALL_TASK (syscall.caller_task)
 #define SYSCALL_GET_PARAMETER(index) (syscall.caller_task->syscall_execution.parameters[index])

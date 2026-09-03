@@ -143,8 +143,9 @@ void terminal_module_init(text_display_driver_t* driver)
     terminal_create(&terminal, driver);
 }
 
-resource_result_t terminal_write(resource_t* resource, void* buffer, size_t length, size_t* written_bytes)
+resource_result_t terminal_write(resource_t* resource, size_t offset, void* buffer, size_t length, size_t* written_bytes)
 {
+    (void)offset; // terminal is a stream, not seekable
     terminal_t* terminal = (terminal_t*)resource->data;
     const char* data = (const char*)buffer;
 

@@ -7,7 +7,11 @@
 vfs_node_operations_t ramfs_node_operations = (vfs_node_operations_t){
     .lookup = ramfs_lookup,
     .readdir = ramfs_readdir,
-    .read = ramfs_read
+    .read = ramfs_read,
+    .write = ramfs_write,
+    .size = ramfs_size,
+    .create = ramfs_create,
+    .truncate = ramfs_truncate
 };
 
 resource_result_t ramfs_lookup(vfs_node_t* directory, const char* path, vfs_node_t** out)
@@ -26,6 +30,36 @@ resource_result_t ramfs_lookup(vfs_node_t* directory, const char* path, vfs_node
         }
     }
     return RESOURCE_RESULT_NOT_FOUND;
+}
+
+resource_result_t ramfs_create(vfs_node_t* directory, const char* name, vfs_node_type type, vfs_node_t** result)
+{
+    ramfs_node_t* parent = directory->fs_data;
+
+    ramfs_node_t* existing;
+    if (ramfs_find_child(parent, name, &existing) == RAMFS_RESULT_OK)
+    {
+        resource_result_t queue_result = vfs_cache_query_node(&vfs, directory->cache_index, existing->id, result);
+        if (queue_result == RESOURCE_RESULT_OK) return RESOURCE_RESULT_OK;
+        return vfs_create_node(&vfs, directory, existing->id, existing->name, &ramfs_node_operations, existing, existing->type, result);
+    }
+
+    ramfs_node_t* node;
+    if (ramfs_create_node(&ramfs, name, type, NULL, 0, &node) != RAMFS_RESULT_OK) return RESOURCE_RESULT_ALLOCATION_ERROR;
+    if (ramfs_add_child(parent, node) != RAMFS_RESULT_OK) return RESOURCE_RESULT_ALLOCATION_ERROR;
+
+    return vfs_create_node(&vfs, directory, node->id, node->name, &ramfs_node_operations, node, node->type, result);
+}
+
+resource_result_t ramfs_truncate(vfs_node_t* file)
+{
+    ramfs_node_t* node = file->fs_data;
+
+    if (node->data) kernel_heap_free(node->data);
+    node->data = NULL;
+    node->data_size = 0;
+
+    return RESOURCE_RESULT_OK;
 }
 
 resource_result_t ramfs_readdir(vfs_node_t* directory, size_t index, vfs_dir_t* entry)
@@ -107,6 +141,41 @@ resource_result_t ramfs_read(vfs_node_t* file, size_t offset, void* buffer, size
     memcpy(buffer, (uint8_t*)node->data + offset, length_to_read);
 
     *read_bytes = length_to_read;
+    return RESOURCE_RESULT_OK;
+}
+
+resource_result_t ramfs_write(vfs_node_t* file, size_t offset, void* buffer, size_t length, size_t* written_bytes)
+{
+    ramfs_node_t* node = file->fs_data;
+
+    size_t required_size = offset + length;
+    if (required_size > node->data_size)
+    {
+        void* new_data = kernel_heap_malloc(required_size);
+        if (!new_data)
+        {
+            *written_bytes = 0;
+            return RESOURCE_RESULT_ALLOCATION_ERROR;
+        }
+
+        if (node->data_size) memcpy(new_data, node->data, node->data_size);
+        if (offset > node->data_size) memset((uint8_t*)new_data + node->data_size, 0, offset - node->data_size);
+        if (node->data) kernel_heap_free(node->data);
+
+        node->data = new_data;
+        node->data_size = required_size;
+    }
+
+    memcpy((uint8_t*)node->data + offset, buffer, length);
+
+    *written_bytes = length;
+    return RESOURCE_RESULT_OK;
+}
+
+resource_result_t ramfs_size(vfs_node_t* file, size_t* out_size)
+{
+    ramfs_node_t* node = file->fs_data;
+    *out_size = node->data_size;
     return RESOURCE_RESULT_OK;
 }
 
