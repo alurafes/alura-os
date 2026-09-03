@@ -145,6 +145,8 @@ task_t* task_manager_task_copy(task_manager_t* task_manager, task_t* parent, uin
     task->task_queue_level = 0; // new tasks with the highest queue level
     task->task_is_user = parent->task_is_user;
     task->task_init_eip = parent->task_init_eip;
+    task->heap_start = parent->heap_start;
+    task->heap_break = parent->heap_break;
 
     memory_paging_create_page_directory(&task->task_cr3); // todo: panic!!
     page_entry_t* task_page_directory = bounce_alloc(task->task_cr3);

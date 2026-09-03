@@ -24,6 +24,9 @@ extern char _kernel_physical_end;
 #define USER_STACK_TOP 0xBFFFE000
 #define KERNEL_STACK_TOP 0xD0000000
 
+#define USER_HEAP_GUARD_SIZE 0x100000
+#define USER_HEAP_VIRTUAL_CEILING (USER_STACK_TOP - PAGE_SIZE - USER_HEAP_GUARD_SIZE)
+
 #define ALIGN_UP_TO_SPECIFIC_PAGE(value, page_size) (value + page_size - 1) & ~(page_size - 1)
 #define ALIGN_DOWN_TO_SPECIFIC_PAGE(value, page_size) ((value) & ~(page_size - 1))
 #define ALIGN_UP(value) (ALIGN_UP_TO_SPECIFIC_PAGE(value, PAGE_SIZE))

@@ -34,6 +34,10 @@ int waitpid(int pid, int* status) {
     return syscall2(SYSCALL_WAITPID, pid, (int)status);
 }
 
+void* sbrk(int increment) {
+    return (void*)syscall1(SYSCALL_SBRK, increment);
+}
+
 int debug_print(const char* msg, int arg) {
     return syscall2(SYSCALL_DEBUG_PRINT, (int)msg, arg);
 }

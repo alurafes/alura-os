@@ -9,6 +9,7 @@
 #define SYSCALL_EXECVE 5
 #define SYSCALL_EXIT 6
 #define SYSCALL_WAITPID 7
+#define SYSCALL_SBRK 8
 #define SYSCALL_DEBUG_PRINT 10
 
 #define STDIN 0
@@ -50,6 +51,7 @@ int fork(void);
 int execve(const char* path, char* const argv[]);
 void exit(int code) __attribute__((noreturn));
 int waitpid(int pid, int* status);
+void* sbrk(int increment);
 int debug_print(const char* msg, int arg);
 
 #endif

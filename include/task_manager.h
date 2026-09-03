@@ -88,6 +88,8 @@ typedef struct task_t {
     syscall_execution_state_t syscall_execution_state;
     task_wait_reason_t wait_reason;
     void* wait_object;
+    uintptr_t heap_start;
+    uintptr_t heap_break;
 } task_t;
 
 typedef struct task_manager_t {

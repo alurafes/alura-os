@@ -234,6 +234,87 @@ int32_t syscall_waitpid()
     return child_pid;
 }
 
+void* syscall_sbrk_allocate_physical_memory(size_t bytes)
+{
+    size_t bytes_to_allocate = ALIGN_UP(bytes);
+    size_t pages_to_allocate = bytes_to_allocate / PAGE_SIZE;
+    if (SYSCALL_TASK->heap_break + bytes_to_allocate > USER_HEAP_VIRTUAL_CEILING) return NULL;
+
+    page_entry_t* current_page_directory_phys = memory_paging_get_current_page_directory_physical();
+
+    uintptr_t start_address = SYSCALL_TASK->heap_break;
+    uintptr_t address = start_address;
+    for (size_t i = 0; i < pages_to_allocate; ++i)
+    {
+        void* physical_allocated = memory_bitmap_allocate();
+        if (!physical_allocated)
+        {
+            for (uintptr_t unwind_address = start_address; unwind_address < address; unwind_address += PAGE_SIZE)
+            {
+                uintptr_t unwind_physical = memory_paging_virtual_to_physical(current_page_directory_phys, unwind_address);
+                memory_paging_unmap_current(unwind_address);
+                if (unwind_physical) memory_bitmap_free((void*)unwind_physical);
+            }
+            return NULL;
+        }
+        memory_paging_map_current((uint32_t)physical_allocated, (uint32_t)address, PAGE_PRESENT | PAGE_USER | PAGE_READ_WRITE);
+        address += PAGE_SIZE;
+    }
+    void* allocated_address = (void*)SYSCALL_TASK->heap_break;
+    SYSCALL_TASK->heap_break += bytes_to_allocate;
+    return allocated_address;
+}
+
+void syscall_sbrk_free_physical_memory(size_t bytes)
+{
+    size_t bytes_to_free = ALIGN_UP(bytes);
+    size_t pages_to_free = bytes_to_free / PAGE_SIZE;
+
+    page_entry_t* current_page_directory_phys = memory_paging_get_current_page_directory_physical();
+
+    uintptr_t address = SYSCALL_TASK->heap_break;
+    for (size_t i = 0; i < pages_to_free; ++i)
+    {
+        address -= PAGE_SIZE;
+
+        uintptr_t physical_address = memory_paging_virtual_to_physical(current_page_directory_phys, address);
+        memory_paging_unmap_current(address);
+        if (physical_address) memory_bitmap_free((void*)physical_address);
+    }
+
+    SYSCALL_TASK->heap_break -= bytes_to_free;
+}
+
+int32_t syscall_sbrk()
+{
+    int32_t delta = SYSCALL_GET_PARAMETER(0);
+
+    if (!SYSCALL_TASK->task_is_user) return -(int32_t)SYSCALL_RESULT_FAIL;
+
+    uintptr_t current_heap_break = SYSCALL_TASK->heap_break;
+
+    if (delta == 0) return (int32_t)current_heap_break;
+
+    if (current_heap_break == 0) return -(int32_t)SYSCALL_RESULT_FAIL;
+
+    int64_t new_break = (int64_t)current_heap_break + (int64_t)delta;
+
+    if (new_break >= (int64_t)USER_HEAP_VIRTUAL_CEILING) return -(int32_t)SYSCALL_RESULT_OUT_OF_MEMORY;
+    if (new_break < (int64_t)SYSCALL_TASK->heap_start) return -(int32_t)SYSCALL_RESULT_FAIL;
+    if (new_break >= (int64_t)KERNEL_VIRTUAL_SPACE_START) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+
+    if (delta > 0)
+    {
+        if (syscall_sbrk_allocate_physical_memory((size_t)delta) == NULL) return -(int32_t)SYSCALL_RESULT_OUT_OF_MEMORY;
+    }
+    else
+    {
+        syscall_sbrk_free_physical_memory((size_t)(-(int64_t)delta));
+    }
+
+    return (int32_t)current_heap_break;
+}
+
 int32_t syscall_print()
 {
     const char* message = (const char*)SYSCALL_GET_PARAMETER(0);
@@ -310,6 +391,11 @@ void syscall_handler(register_interrupt_data_t* data)
         case SYSCALL_WAITPID:
         {
             data->eax = syscall_waitpid();
+            break;
+        }
+        case SYSCALL_SBRK:
+        {
+            data->eax = syscall_sbrk();
             break;
         }
         case 10:

@@ -2,6 +2,7 @@
 #define ALURA_SYSCALL_H
 
 #include "idt.h"
+#include "memory.h"
 
 // todo: figure out a better way
 
@@ -15,6 +16,7 @@
 #define SYSCALL_EXECVE 5
 #define SYSCALL_EXIT 6
 #define SYSCALL_WAITPID 7
+#define SYSCALL_SBRK 8
 
 #define SYSCALL_TASK (syscall.caller_task)
 #define SYSCALL_GET_PARAMETER(index) (syscall.caller_task->syscall_execution.parameters[index])
@@ -26,6 +28,7 @@ typedef enum syscall_result_t {
     SYSCALL_RESULT_FAIL,
     SYSCALL_RESULT_BAD_PARAMETER,
     SYSCALL_RESULT_BUSY,
+    SYSCALL_RESULT_OUT_OF_MEMORY,
 } syscall_result_t;
 
 typedef struct syscall_execution_t {

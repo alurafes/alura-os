@@ -54,6 +54,8 @@ elf_result_t elf_load_into_task(task_t* task, const char* path, char* const argv
     uint32_t new_task_esp = 0;
     task_manager_prepare_new_stack_with_args(new_task_page_directory, task->task_is_user, header.e_entry, argv, &new_task_esp);
 
+    uintptr_t heap_start = 0;
+
     for (size_t i = 0; i < header.e_phnum; ++i)
     {
         Elf32_Phdr program_header;
@@ -70,6 +72,8 @@ elf_result_t elf_load_into_task(task_t* task, const char* path, char* const argv
 
         uint32_t segment_start = ALIGN_DOWN(program_header.p_vaddr);
         uint32_t segment_end = ALIGN_UP(program_header.p_vaddr + program_header.p_memsz);
+
+        if (segment_end > heap_start) heap_start = segment_end;
 
         for (uint32_t address = segment_start; address < segment_end; address += PAGE_SIZE)
         {
@@ -149,6 +153,8 @@ elf_result_t elf_load_into_task(task_t* task, const char* path, char* const argv
     task->task_init_eip = header.e_entry;
     task->task_cr3 = (uint32_t)new_task_page_directory_phys;
     task->task_esp = new_task_esp;
+    task->heap_start = heap_start;
+    task->heap_break = heap_start;
 
     bounce_free((uintptr_t)new_task_page_directory);
 
