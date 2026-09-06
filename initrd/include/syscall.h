@@ -13,6 +13,7 @@
 #define SYSCALL_ISATTY 9
 #define SYSCALL_GETPID 10
 #define SYSCALL_LSEEK 11
+#define SYSCALL_FCNTL 12
 
 #define STDIN 0
 #define STDOUT 1
@@ -21,13 +22,18 @@
 #define SEEK_CUR 1
 #define SEEK_END 2
 
+#define F_GETFL 1
+#define F_SETFL 2
+
 #define O_RDONLY 0x0000
 #define O_WRONLY 0x0001
-#define O_RDWR   0x0002
+#define O_RDWR 0x0002
+#define O_ACCMODE 0x0003
+#define O_NONBLOCK 0x0004
 #define O_APPEND 0x0008
-#define O_CREAT  0x0200
-#define O_TRUNC  0x0400
-#define O_EXCL   0x0800
+#define O_CREAT 0x0200
+#define O_TRUNC 0x0400
+#define O_EXCL 0x0800
 
 static inline int syscall0(int n)
 {
@@ -69,5 +75,6 @@ void* sbrk(int increment);
 int isatty(int fd);
 int getpid(void);
 int lseek(int fd, int offset, int whence);
+int fcntl(int fd, int cmd, int arg);
 
 #endif

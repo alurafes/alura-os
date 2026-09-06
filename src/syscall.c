@@ -20,14 +20,14 @@ int32_t syscall_open()
     if (strcmp(path, "/dev/keyboard") == 0)
     {
         size_t index = 0;
-        resource_result_t result = keyboard_open(SYSCALL_TASK, &index);
+        resource_result_t result = keyboard_open(SYSCALL_TASK, flags, &index);
         if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
         return index;
     }
     if (strcmp(path, "/dev/terminal") == 0)
     {
         size_t index = 0;
-        resource_result_t result = terminal_open(SYSCALL_TASK, &index);
+        resource_result_t result = terminal_open(SYSCALL_TASK, flags, &index);
         if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
         return index;
     }
@@ -51,7 +51,7 @@ int32_t syscall_open()
     if (node->type != VFS_NODE_TYPE_FILE) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
 
     size_t index = 0;
-    result = resource_register(SYSCALL_TASK, RESOURCE_TYPE_FILE, node, &vfs_operations, &index);
+    result = resource_register(SYSCALL_TASK, RESOURCE_TYPE_FILE, node, &vfs_operations, flags, &index);
     if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
 
     return index;
@@ -87,6 +87,11 @@ int32_t syscall_read()
     resource_t* resource = SYSCALL_TASK->resources[resource_index];
     if (!resource) return -(int32_t)SYSCALL_RESULT_FAIL;
 
+    if ((resource->flags & SYSCALL_O_ACCMODE) == SYSCALL_O_WRONLY) 
+    {
+        return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    }
+
     size_t read_bytes = 0;
     if (resource->operations.read == NULL) return read_bytes;
 
@@ -94,6 +99,12 @@ int32_t syscall_read()
 
     if (result == RESOURCE_RESULT_WILL_BLOCK)
     {
+        if (resource->flags & SYSCALL_O_NONBLOCK)
+        {
+            SYSCALL_TASK->syscall_retry = 0;
+            return -(int32_t)SYSCALL_RESULT_WOULD_BLOCK;
+        }
+
         task_manager_block_task(&task_manager, SYSCALL_TASK, TASK_WAIT_REASON_IO, resource->data);
         task_manager_yield_current(&task_manager);
 
@@ -134,6 +145,11 @@ int32_t syscall_write()
 
     resource_t* resource = SYSCALL_TASK->resources[resource_index];
     if (!resource) return -(int32_t)SYSCALL_RESULT_FAIL;
+
+    if ((resource->flags & SYSCALL_O_ACCMODE) == SYSCALL_O_RDONLY) 
+    {
+        return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    }
 
     size_t written_bytes = 0;
 
@@ -404,6 +420,28 @@ int32_t syscall_lseek()
     return (int32_t)resource->offset;
 }
 
+int32_t syscall_fcntl()
+{
+    uint32_t resource_index = (uint32_t)SYSCALL_GET_PARAMETER(0);
+    int32_t command = (int32_t)SYSCALL_GET_PARAMETER(1);
+    uint32_t argument = (uint32_t)SYSCALL_GET_PARAMETER(2);
+
+    if (resource_index >= TASK_MAX_RESOURCES) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    resource_t* resource = SYSCALL_TASK->resources[resource_index];
+    if (!resource) return -(int32_t)SYSCALL_RESULT_FAIL;
+
+    switch (command)
+    {
+        case SYSCALL_F_GETFL:
+            return (int32_t)resource->flags;
+        case SYSCALL_F_SETFL:
+            resource->flags = argument;
+            return SYSCALL_RESULT_OK;
+        default:
+            return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    }
+}
+
 void syscall_handler(register_interrupt_data_t* data)
 {
     syscall.caller_task = task_manager.task_current;
@@ -489,6 +527,11 @@ void syscall_handler(register_interrupt_data_t* data)
         case SYSCALL_LSEEK:
         {
             data->eax = syscall_lseek();
+            break;
+        }
+        case SYSCALL_FCNTL:
+        {
+            data->eax = syscall_fcntl();
             break;
         }
     }

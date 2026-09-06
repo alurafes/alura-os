@@ -38,9 +38,10 @@ typedef struct resource_t {
     resource_operations_t operations;
     uint32_t ref_count;
     size_t offset;
+    uint32_t flags;
 } resource_t;
 
-resource_result_t resource_register(task_t* task, resource_type_t type, void* data, resource_operations_t* operations, size_t* result);
+resource_result_t resource_register(task_t* task, resource_type_t type, void* data, resource_operations_t* operations, int32_t flags, size_t* result);
 resource_result_t resource_remove(task_t* task, size_t index);
 resource_result_t resource_share(task_t* child, size_t index, resource_t* resource);
 

@@ -49,6 +49,6 @@ terminal_result_t terminal_render(terminal_t* terminal);
 extern terminal_t terminal;
 void terminal_module_init(text_display_driver_t* driver);
 
-resource_result_t terminal_open(task_t* task, size_t* result);
+resource_result_t terminal_open(task_t* task, int32_t flags, size_t* result);
 
 #endif // ALURA_TERMINAL_H

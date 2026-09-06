@@ -73,7 +73,7 @@ resource_operations_t keyboard_operations = {
 };
 
 
-resource_result_t keyboard_open(task_t* task, size_t* result)
+resource_result_t keyboard_open(task_t* task, int32_t flags, size_t* result)
 {
-    return resource_register(task, RESOURCE_TYPE_KEYBOARD, &keyboard, &keyboard_operations, result);
+    return resource_register(task, RESOURCE_TYPE_KEYBOARD, &keyboard, &keyboard_operations, flags, result);
 }

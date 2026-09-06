@@ -20,18 +20,24 @@
 #define SYSCALL_ISATTY 9
 #define SYSCALL_GETPID 10
 #define SYSCALL_LSEEK 11
+#define SYSCALL_FCNTL 12
 
 #define SYSCALL_LSEEK_SET 0
 #define SYSCALL_LSEEK_CUR 1
 #define SYSCALL_LSEEK_END 2
 
+#define SYSCALL_F_GETFL 1
+#define SYSCALL_F_SETFL 2
+
 #define SYSCALL_O_RDONLY 0x0000
 #define SYSCALL_O_WRONLY 0x0001
-#define SYSCALL_O_RDWR   0x0002
+#define SYSCALL_O_RDWR 0x0002
+#define SYSCALL_O_ACCMODE 0x0003
+#define SYSCALL_O_NONBLOCK 0x0004
 #define SYSCALL_O_APPEND 0x0008
-#define SYSCALL_O_CREAT  0x0200
-#define SYSCALL_O_TRUNC  0x0400
-#define SYSCALL_O_EXCL   0x0800
+#define SYSCALL_O_CREAT 0x0200
+#define SYSCALL_O_TRUNC 0x0400
+#define SYSCALL_O_EXCL 0x0800
 
 #define SYSCALL_TASK (syscall.caller_task)
 #define SYSCALL_GET_PARAMETER(index) (syscall.caller_task->syscall_execution.parameters[index])
@@ -44,6 +50,7 @@ typedef enum syscall_result_t {
     SYSCALL_RESULT_BAD_PARAMETER,
     SYSCALL_RESULT_BUSY,
     SYSCALL_RESULT_OUT_OF_MEMORY,
+    SYSCALL_RESULT_WOULD_BLOCK,
 } syscall_result_t;
 
 typedef struct syscall_execution_t {

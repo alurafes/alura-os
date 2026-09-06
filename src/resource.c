@@ -2,7 +2,7 @@
 
 #include "print.h"
 
-resource_result_t resource_register(task_t* task, resource_type_t type, void* data, resource_operations_t* operations, size_t* result)
+resource_result_t resource_register(task_t* task, resource_type_t type, void* data, resource_operations_t* operations, int32_t flags, size_t* result)
 {
     if (!task || !operations) return RESOURCE_RESULT_BAD_PARAMETER;
     int32_t free_index = -1;
@@ -21,6 +21,7 @@ resource_result_t resource_register(task_t* task, resource_type_t type, void* da
     resource->data = data;
     resource->operations = *operations;
     resource->ref_count = 1;
+    resource->flags = flags;
 
     task->resources[free_index] = resource;
     if (result != NULL) *result = free_index;

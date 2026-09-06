@@ -25,6 +25,6 @@ typedef struct keyboard_t {
 extern keyboard_t keyboard;
 void keyboard_driver_init();
 
-resource_result_t keyboard_open(task_t* task, size_t* result);
+resource_result_t keyboard_open(task_t* task, int32_t flags, size_t* result);
 
 #endif // ALURA_DRIVER_KEYBOARD_H

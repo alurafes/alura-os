@@ -165,7 +165,7 @@ resource_operations_t terminal_operations = {
     .write = terminal_write
 };
 
-resource_result_t terminal_open(task_t* task, size_t* result)
+resource_result_t terminal_open(task_t* task, int32_t flags, size_t* result)
 {
-    return resource_register(task, RESOURCE_TYPE_TERMINAL, &terminal, &terminal_operations, result);
+    return resource_register(task, RESOURCE_TYPE_TERMINAL, &terminal, &terminal_operations, flags, result);
 }
