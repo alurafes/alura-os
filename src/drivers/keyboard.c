@@ -2,9 +2,10 @@
 
 #include "print.h"
 
-resource_result_t keyboard_read(resource_t* resource, size_t offset, void* buffer, size_t length, size_t* read_bytes)
+resource_result_t keyboard_read(vfs_node_t* file, size_t offset, void* buffer, size_t length, size_t* read_bytes)
 {
-    keyboard_t* keyboard = (keyboard_t*)resource->data;
+    (void)offset; // keyboard is a stream, not seekable
+    keyboard_t* keyboard = (keyboard_t*)file->fs_data;
 
     uint8_t* out = (uint8_t*)buffer;
     size_t written = 0;
@@ -68,12 +69,3 @@ void keyboard_driver_init()
     irq_register_handler(&irq, 1, keyboard_irq_handler);
 }
 
-resource_operations_t keyboard_operations = {
-    .read = keyboard_read
-};
-
-
-resource_result_t keyboard_open(task_t* task, int32_t flags, size_t* result)
-{
-    return resource_register(task, RESOURCE_TYPE_KEYBOARD, &keyboard, &keyboard_operations, flags, result);
-}

@@ -40,6 +40,7 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
     framebuffer_driver_init(multiboot_virtual);
     ramfs_driver_init(multiboot_virtual);
     vfs_module_init();
+    devfs_module_init();
 
     terminal_module_init(&framebuffer.driver);
 
@@ -47,9 +48,9 @@ kernel_result_t kernel_initialize(multiboot_info_t* multiboot)
 
     char* init_argv[] = { "/bin/init.elf", NULL };
     elf_load_and_execute("/bin/init.elf", init_argv, &task_manager.task_init);
-    keyboard_open(task_manager.task_init, SYSCALL_O_RDONLY, NULL); // stdin
-    terminal_open(task_manager.task_init, SYSCALL_O_WRONLY, NULL); // stdout
-    terminal_open(task_manager.task_init, SYSCALL_O_WRONLY, NULL); // stderr
+    vfs_open(&vfs, task_manager.task_init, "/dev/keyboard", SYSCALL_O_RDONLY, NULL); // stdin
+    vfs_open(&vfs, task_manager.task_init, "/dev/terminal", SYSCALL_O_WRONLY, NULL); // stdout
+    vfs_open(&vfs, task_manager.task_init, "/dev/terminal", SYSCALL_O_WRONLY, NULL); // stderr
 
     __asm__ volatile("sti");
 

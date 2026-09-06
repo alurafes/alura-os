@@ -19,6 +19,7 @@
 #include "elf_executable.h"
 
 #include "fs/ramfs.h"
+#include "fs/devfs.h"
 
 #include "drivers/vga.h"
 #include "drivers/keyboard.h"

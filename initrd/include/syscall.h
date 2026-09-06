@@ -14,6 +14,7 @@
 #define SYSCALL_GETPID 10
 #define SYSCALL_LSEEK 11
 #define SYSCALL_FCNTL 12
+#define SYSCALL_IOCTL 13
 
 #define STDIN 0
 #define STDOUT 1

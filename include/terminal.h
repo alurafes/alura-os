@@ -5,6 +5,7 @@
 #include "text_display_driver.h"
 #include "resourse.h"
 #include "kernel_heap.h"
+#include "vfs.h"
 
 typedef struct terminal_point_t {
     int x;
@@ -49,6 +50,6 @@ terminal_result_t terminal_render(terminal_t* terminal);
 extern terminal_t terminal;
 void terminal_module_init(text_display_driver_t* driver);
 
-resource_result_t terminal_open(task_t* task, int32_t flags, size_t* result);
+resource_result_t terminal_write(vfs_node_t* file, size_t offset, void* buffer, size_t length, size_t* written_bytes);
 
 #endif // ALURA_TERMINAL_H

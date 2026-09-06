@@ -4,6 +4,7 @@
 #include "irq.h"
 #include "io.h"
 #include "resourse.h"
+#include "vfs.h"
 
 #define KEYBOARD_BUFFER_SIZE 256
 
@@ -25,6 +26,6 @@ typedef struct keyboard_t {
 extern keyboard_t keyboard;
 void keyboard_driver_init();
 
-resource_result_t keyboard_open(task_t* task, int32_t flags, size_t* result);
+resource_result_t keyboard_read(vfs_node_t* file, size_t offset, void* buffer, size_t length, size_t* read_bytes);
 
 #endif // ALURA_DRIVER_KEYBOARD_H

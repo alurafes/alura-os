@@ -143,10 +143,10 @@ void terminal_module_init(text_display_driver_t* driver)
     terminal_create(&terminal, driver);
 }
 
-resource_result_t terminal_write(resource_t* resource, size_t offset, void* buffer, size_t length, size_t* written_bytes)
+resource_result_t terminal_write(vfs_node_t* file, size_t offset, void* buffer, size_t length, size_t* written_bytes)
 {
     (void)offset; // terminal is a stream, not seekable
-    terminal_t* terminal = (terminal_t*)resource->data;
+    terminal_t* terminal = (terminal_t*)file->fs_data;
     const char* data = (const char*)buffer;
 
     size_t written = 0;
@@ -159,13 +159,4 @@ resource_result_t terminal_write(resource_t* resource, size_t offset, void* buff
     if (written_bytes != NULL) *written_bytes = written;
 
     return RESOURCE_RESULT_OK;
-}
-
-resource_operations_t terminal_operations = {
-    .write = terminal_write
-};
-
-resource_result_t terminal_open(task_t* task, int32_t flags, size_t* result)
-{
-    return resource_register(task, RESOURCE_TYPE_TERMINAL, &terminal, &terminal_operations, flags, result);
 }

@@ -6,9 +6,6 @@
 
 #include "print.h"
 
-#include "drivers/keyboard.h"
-#include "terminal.h"
-
 syscall_t syscall;
 
 int32_t syscall_open()
@@ -16,42 +13,8 @@ int32_t syscall_open()
     const char* path = (const char*)SYSCALL_GET_PARAMETER(0);
     int32_t flags = (int32_t)SYSCALL_GET_PARAMETER(1);
 
-    // gotta get that /dev sorted out soon ish
-    if (strcmp(path, "/dev/keyboard") == 0)
-    {
-        size_t index = 0;
-        resource_result_t result = keyboard_open(SYSCALL_TASK, flags, &index);
-        if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
-        return index;
-    }
-    if (strcmp(path, "/dev/terminal") == 0)
-    {
-        size_t index = 0;
-        resource_result_t result = terminal_open(SYSCALL_TASK, flags, &index);
-        if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
-        return index;
-    }
-
-    vfs_node_t* node = NULL;
-    resource_result_t result = vfs_resolve(&vfs, path, &node);
-
-    if (result != RESOURCE_RESULT_OK)
-    {
-        if (result != RESOURCE_RESULT_NOT_FOUND || !(flags & SYSCALL_O_CREAT)) return -(int32_t)SYSCALL_RESULT_FAIL;
-
-        result = vfs_create(&vfs, path, VFS_NODE_TYPE_FILE, &node);
-        if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
-    }
-    else if (flags & SYSCALL_O_TRUNC)
-    {
-        if (node->type != VFS_NODE_TYPE_FILE) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
-        vfs_truncate(node);
-    }
-
-    if (node->type != VFS_NODE_TYPE_FILE) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
-
     size_t index = 0;
-    result = resource_register(SYSCALL_TASK, RESOURCE_TYPE_FILE, node, &vfs_operations, flags, &index);
+    resource_result_t result = vfs_open(&vfs, SYSCALL_TASK, path, flags, &index);
     if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
 
     return index;
@@ -59,7 +22,7 @@ int32_t syscall_open()
 
 int32_t syscall_close()
 {
-    uint32_t resource_index = (uint32_t)SYSCALL_GET_PARAMETER(0);
+    size_t resource_index = (size_t)SYSCALL_GET_PARAMETER(0);
 
     resource_t* resource = SYSCALL_TASK->resources[resource_index];
     if (!resource) return -(int32_t)SYSCALL_RESULT_FAIL;
@@ -71,7 +34,7 @@ int32_t syscall_close()
 
 int32_t syscall_read()
 {
-    uint32_t resource_index = (uint32_t)SYSCALL_GET_PARAMETER(0);
+    size_t resource_index = (size_t)SYSCALL_GET_PARAMETER(0);
     void* buffer = (void*)SYSCALL_GET_PARAMETER(1);
     size_t length = (size_t)SYSCALL_GET_PARAMETER(2);
 
@@ -105,7 +68,8 @@ int32_t syscall_read()
             return -(int32_t)SYSCALL_RESULT_WOULD_BLOCK;
         }
 
-        task_manager_block_task(&task_manager, SYSCALL_TASK, TASK_WAIT_REASON_IO, resource->data);
+        vfs_node_t* node = (vfs_node_t*)resource->data;
+        task_manager_block_task(&task_manager, SYSCALL_TASK, TASK_WAIT_REASON_IO, node->fs_data);
         task_manager_yield_current(&task_manager);
 
         SYSCALL_TASK->syscall_retry = 1;
@@ -124,7 +88,7 @@ int32_t syscall_read()
 
 int32_t syscall_write()
 {
-    uint32_t resource_index = (uint32_t)SYSCALL_GET_PARAMETER(0);
+    size_t resource_index = (size_t)SYSCALL_GET_PARAMETER(0);
     void* buffer = (void*)SYSCALL_GET_PARAMETER(1);
     size_t length = (size_t)SYSCALL_GET_PARAMETER(2);
 
@@ -361,7 +325,7 @@ int32_t syscall_sbrk()
 
 int32_t syscall_isatty()
 {
-    uint32_t resource_index = (uint32_t)SYSCALL_GET_PARAMETER(0);
+    size_t resource_index = (size_t)SYSCALL_GET_PARAMETER(0);
     if (resource_index >= TASK_MAX_RESOURCES) return 0;
     resource_t* resource = SYSCALL_TASK->resources[resource_index];
     if (resource == NULL) return 0;
@@ -375,7 +339,7 @@ int32_t syscall_getpid()
 
 int32_t syscall_lseek()
 {
-    uint32_t resource_index = (uint32_t)SYSCALL_GET_PARAMETER(0);
+    size_t resource_index = (size_t)SYSCALL_GET_PARAMETER(0);
     int32_t offset = (int32_t)SYSCALL_GET_PARAMETER(1);
     int32_t whence = (int32_t)SYSCALL_GET_PARAMETER(2);
 
@@ -422,7 +386,7 @@ int32_t syscall_lseek()
 
 int32_t syscall_fcntl()
 {
-    uint32_t resource_index = (uint32_t)SYSCALL_GET_PARAMETER(0);
+    size_t resource_index = (size_t)SYSCALL_GET_PARAMETER(0);
     int32_t command = (int32_t)SYSCALL_GET_PARAMETER(1);
     uint32_t argument = (uint32_t)SYSCALL_GET_PARAMETER(2);
 
@@ -440,6 +404,19 @@ int32_t syscall_fcntl()
         default:
             return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
     }
+}
+
+int32_t syscall_ioctl()
+{
+    size_t resource_index = (size_t)SYSCALL_GET_PARAMETER(0);
+    int32_t command = (int32_t)SYSCALL_GET_PARAMETER(1);
+    int32_t argument = (int32_t)SYSCALL_GET_PARAMETER(2);
+
+    resource_t* resource = SYSCALL_TASK->resources[resource_index];
+    if (!resource) return -(int32_t)SYSCALL_RESULT_FAIL;
+    if (resource->operations.ioctl == NULL) return -(int32_t)SYSCALL_RESULT_FAIL;
+
+    return resource->operations.ioctl(resource, command, argument);
 }
 
 void syscall_handler(register_interrupt_data_t* data)
@@ -532,6 +509,11 @@ void syscall_handler(register_interrupt_data_t* data)
         case SYSCALL_FCNTL:
         {
             data->eax = syscall_fcntl();
+            break;
+        }
+        case SYSCALL_IOCTL:
+        {
+            data->eax = syscall_ioctl();
             break;
         }
     }

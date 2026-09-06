@@ -30,6 +30,7 @@ typedef struct resource_operations_t {
     resource_result_t (*close)(resource_t* resource);
     resource_result_t (*read)(resource_t* resource, size_t offset, void* buffer, size_t length, size_t* read_bytes);
     resource_result_t (*write)(resource_t* resource, size_t offset, void* buffer, size_t length, size_t* written_bytes);
+    resource_result_t (*ioctl)(resource_t* resource, int32_t command, int32_t argument);
 } resource_operations_t;
 
 typedef struct resource_t {

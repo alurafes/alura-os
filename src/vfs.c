@@ -2,18 +2,19 @@
 
 #include "fs/ramfs.h"
 #include "print.h"
+#include "syscall.h"
 
 resource_operations_t vfs_operations = {
     .close = vfs_close,
     .read = vfs_read,
-    .write = vfs_write
+    .write = vfs_write,
 };
 
 vfs_t vfs;
 void vfs_module_init()
 {
     vfs.last_cache_index = 0;
-    vfs_create_node(&vfs, NULL, ramfs.root_node->id, ramfs.root_node->name, &ramfs_node_operations, ramfs.root_node, ramfs.root_node->type, &vfs.root);
+    vfs_create_node(&vfs, NULL, ramfs.root_node->id, ramfs.root_node->name, &ramfs_node_operations, ramfs.root_node, ramfs.root_node->type, RESOURCE_TYPE_FILE, &vfs.root);
     vfs_lock_node(vfs.root);
 }
 
@@ -96,8 +97,12 @@ resource_result_t vfs_resolve(vfs_t* vfs, const char* path, vfs_node_t** result)
         while (*path && *path != '/') component[component_length++] = *path++;
         component[component_length] = '\0';
         
-        if (current->mount != NULL) current = current->mount;
-        
+        if (current->mount != NULL)
+        {
+            current = current->mount;
+            vfs_lock_node(current);
+        }
+
         if (!current->operations.lookup) return RESOURCE_RESULT_BAD_PARAMETER;
         
         vfs_node_t* next;
@@ -143,7 +148,7 @@ resource_result_t vfs_cache_query_node(vfs_t* vfs, size_t cache_index, int64_t i
     return RESOURCE_RESULT_NOT_FOUND;
 }
 
-resource_result_t vfs_create_node(vfs_t* vfs, vfs_node_t* parent, int64_t id, const char* name, vfs_node_operations_t* operations, void* fs_data, vfs_node_type type, vfs_node_t** result)
+resource_result_t vfs_create_node(vfs_t* vfs, vfs_node_t* parent, int64_t id, const char* name, vfs_node_operations_t* operations, void* fs_data, vfs_node_type type, resource_type_t resource_type, vfs_node_t** result)
 {
     if (!vfs || !operations || !result) return RESOURCE_RESULT_BAD_PARAMETER;
     vfs_node_t* node = (vfs_node_t*)kernel_heap_calloc(sizeof(vfs_node_t));
@@ -152,6 +157,7 @@ resource_result_t vfs_create_node(vfs_t* vfs, vfs_node_t* parent, int64_t id, co
     strcpy(node->name, name);
     node->operations = *operations;
     node->type = type;
+    node->resource_type = resource_type;
     node->fs_data = fs_data;
     node->cache_index = parent ? parent->cache_index : (vfs->last_cache_index++);
     node->index = id;
@@ -279,6 +285,7 @@ resource_result_t vfs_read(resource_t* resource, size_t offset, void* buffer, si
     vfs_node_t* node = resource->data;
 
     if (node->type != VFS_NODE_TYPE_FILE) return RESOURCE_RESULT_INVALID;
+    if (!node->operations.read) return RESOURCE_RESULT_BAD_PARAMETER;
 
     return node->operations.read(node, offset, buffer, length, read_bytes);
 }
@@ -292,4 +299,27 @@ resource_result_t vfs_write(resource_t* resource, size_t offset, void* buffer, s
     if (!node->operations.write) return RESOURCE_RESULT_BAD_PARAMETER;
 
     return node->operations.write(node, offset, buffer, length, written_bytes);
+}
+
+resource_result_t vfs_open(vfs_t* vfs, task_t* task, const char* path, int32_t flags, size_t* result)
+{
+    vfs_node_t* node = NULL;
+    resource_result_t resolve_result = vfs_resolve(vfs, path, &node);
+
+    if (resolve_result != RESOURCE_RESULT_OK)
+    {
+        if (resolve_result != RESOURCE_RESULT_NOT_FOUND || !(flags & SYSCALL_O_CREAT)) return resolve_result;
+
+        resolve_result = vfs_create(vfs, path, VFS_NODE_TYPE_FILE, &node);
+        if (resolve_result != RESOURCE_RESULT_OK) return resolve_result;
+    }
+    else if (flags & SYSCALL_O_TRUNC)
+    {
+        if (node->type != VFS_NODE_TYPE_FILE) return RESOURCE_RESULT_BAD_PARAMETER;
+        vfs_truncate(node);
+    }
+
+    if (node->type != VFS_NODE_TYPE_FILE) return RESOURCE_RESULT_BAD_PARAMETER;
+
+    return resource_register(task, node->resource_type, node, &vfs_operations, flags, result);
 }

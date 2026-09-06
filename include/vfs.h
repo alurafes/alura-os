@@ -33,6 +33,7 @@ typedef struct vfs_node_t {
     vfs_node_t* mount;
     vfs_node_operations_t operations;
     vfs_node_type type;
+    resource_type_t resource_type;
     void* fs_data;
     int64_t cache_index;
     int64_t index;
@@ -68,7 +69,7 @@ typedef struct vfs_t {
 extern vfs_t vfs;
 void vfs_module_init();
 
-resource_result_t vfs_create_node(vfs_t* vfs, vfs_node_t* parent, int64_t id, const char* name, vfs_node_operations_t* operations, void* fs_data, vfs_node_type type, vfs_node_t** result);
+resource_result_t vfs_create_node(vfs_t* vfs, vfs_node_t* parent, int64_t id, const char* name, vfs_node_operations_t* operations, void* fs_data, vfs_node_type type, resource_type_t resource_type, vfs_node_t** result);
 resource_result_t vfs_lock_node(vfs_node_t* node);
 resource_result_t vfs_release_node(vfs_node_t* node);
 resource_result_t vfs_resolve(vfs_t* vfs, const char* path, vfs_node_t** result);
@@ -76,6 +77,7 @@ resource_result_t vfs_readdir(vfs_node_t* directory, size_t index, vfs_dir_t* en
 resource_result_t vfs_get_size(vfs_node_t* node, size_t* out_size);
 resource_result_t vfs_create(vfs_t* vfs, const char* path, vfs_node_type type, vfs_node_t** result);
 resource_result_t vfs_truncate(vfs_node_t* node);
+resource_result_t vfs_open(vfs_t* vfs, task_t* task, const char* path, int32_t flags, size_t* result);
 
 resource_result_t vfs_cache_query_node(vfs_t* vfs, size_t cache_index, int64_t id, vfs_node_t** node);
 resource_result_t vfs_cache_put(vfs_t* vfs, vfs_node_t* node);
@@ -84,5 +86,6 @@ resource_result_t vfs_cache_try_evict(vfs_t* vfs, vfs_node_t* node);
 resource_result_t vfs_close(resource_t* resource);
 resource_result_t vfs_read(resource_t* resource, size_t offset, void* buffer, size_t length, size_t* read_bytes);
 resource_result_t vfs_write(resource_t* resource, size_t offset, void* buffer, size_t length, size_t* written_bytes);
+resource_result_t vfs_ioctl(resource_t* resource, int32_t command, int32_t argument);
 
 #endif // ALURA_VFS_H

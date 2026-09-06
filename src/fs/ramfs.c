@@ -24,7 +24,7 @@ resource_result_t ramfs_lookup(vfs_node_t* directory, const char* path, vfs_node
         {
             resource_result_t queue_result = vfs_cache_query_node(&vfs, directory->cache_index, child->id, out);
             if (queue_result == RESOURCE_RESULT_OK) return RESOURCE_RESULT_OK;
-            resource_result_t create_result = vfs_create_node(&vfs, directory, child->id, child->name, &ramfs_node_operations, child, child->type, out);
+            resource_result_t create_result = vfs_create_node(&vfs, directory, child->id, child->name, &ramfs_node_operations, child, child->type, RESOURCE_TYPE_FILE, out);
             if (create_result != RESOURCE_RESULT_OK) return create_result;
             return RESOURCE_RESULT_OK;
         }
@@ -41,14 +41,14 @@ resource_result_t ramfs_create(vfs_node_t* directory, const char* name, vfs_node
     {
         resource_result_t queue_result = vfs_cache_query_node(&vfs, directory->cache_index, existing->id, result);
         if (queue_result == RESOURCE_RESULT_OK) return RESOURCE_RESULT_OK;
-        return vfs_create_node(&vfs, directory, existing->id, existing->name, &ramfs_node_operations, existing, existing->type, result);
+        return vfs_create_node(&vfs, directory, existing->id, existing->name, &ramfs_node_operations, existing, existing->type, RESOURCE_TYPE_FILE, result);
     }
 
     ramfs_node_t* node;
     if (ramfs_create_node(&ramfs, name, type, NULL, 0, &node) != RAMFS_RESULT_OK) return RESOURCE_RESULT_ALLOCATION_ERROR;
     if (ramfs_add_child(parent, node) != RAMFS_RESULT_OK) return RESOURCE_RESULT_ALLOCATION_ERROR;
 
-    return vfs_create_node(&vfs, directory, node->id, node->name, &ramfs_node_operations, node, node->type, result);
+    return vfs_create_node(&vfs, directory, node->id, node->name, &ramfs_node_operations, node, node->type, RESOURCE_TYPE_FILE, result);
 }
 
 resource_result_t ramfs_truncate(vfs_node_t* file)
