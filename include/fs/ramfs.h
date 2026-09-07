@@ -15,15 +15,23 @@
 
 extern vfs_node_operations_t ramfs_node_operations;
 
+typedef struct ramfs_node_t ramfs_node_t;
+
+typedef struct ramfs_dirent_t {
+    char* name;
+    ramfs_node_t* node;
+} ramfs_dirent_t;
+
 typedef struct ramfs_node_t {
     uint64_t id;
     // this kinda smells
-    struct ramfs_node_t* children[RAMFS_NODE_MAX_CHILDREN];
+    ramfs_dirent_t children[RAMFS_NODE_MAX_CHILDREN];
     size_t children_count;
     char name[VFS_NODE_NAME_LENGTH];
     vfs_node_type type;
     void* data;
     size_t data_size;
+    size_t link_count;
 } ramfs_node_t;
 
 typedef enum ramfs_result_t {
@@ -44,7 +52,7 @@ extern ramfs_t ramfs;
 void ramfs_driver_init(multiboot_info_t* multiboot);
 
 ramfs_result_t ramfs_create_node(ramfs_t* ramfs, const char* name, vfs_node_type type, void* data, size_t data_size, ramfs_node_t** out);
-ramfs_result_t ramfs_add_child(ramfs_node_t* parent, ramfs_node_t* child);
+ramfs_result_t ramfs_add_child(ramfs_node_t* parent, const char* name, ramfs_node_t* child);
 ramfs_result_t ramfs_find_child(ramfs_node_t* parent, const char* name, ramfs_node_t** out);
 ramfs_result_t ramfs_get_or_create_directory(ramfs_node_t* root, char* path, ramfs_node_t** out);
 ramfs_result_t ramfs_create_path(ramfs_node_t* root, char* path, vfs_node_type type, ramfs_node_t** out);
@@ -55,5 +63,8 @@ resource_result_t ramfs_write(vfs_node_t* file, size_t offset, void* buffer, siz
 resource_result_t ramfs_size(vfs_node_t* file, size_t* out_size);
 resource_result_t ramfs_create(vfs_node_t* directory, const char* name, vfs_node_type type, vfs_node_t** result);
 resource_result_t ramfs_truncate(vfs_node_t* file);
+resource_result_t ramfs_link(vfs_node_t* directory, const char* name, vfs_node_t* target);
+resource_result_t ramfs_unlink(vfs_node_t* directory, const char* name);
+void ramfs_release(vfs_node_t* file);
 
 #endif // ALURA_FS_RAMFS_H

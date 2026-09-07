@@ -5,6 +5,7 @@
 #include "task_manager.h"
 
 #include "print.h"
+#include "libc/string.h"
 
 syscall_t syscall;
 
@@ -419,6 +420,105 @@ int32_t syscall_ioctl()
     return resource->operations.ioctl(resource, command, argument);
 }
 
+static void syscall_fill_stat(vfs_node_type node_type, resource_type_t resource_type, size_t size, struct stat* out)
+{
+    memset(out, 0, sizeof(*out));
+
+    // hardcoding mod for now
+    if (node_type == VFS_NODE_TYPE_DIRECTORY) out->st_mode = S_IFDIR | 0755;
+    else if (resource_type == RESOURCE_TYPE_KEYBOARD || resource_type == RESOURCE_TYPE_TERMINAL) out->st_mode = S_IFCHR | 0666;
+    else out->st_mode = S_IFREG | 0644;
+
+    out->st_size = (uint32_t)size;
+    out->st_nlink = 1;
+}
+
+static int32_t syscall_validate_user_buffer(void* buffer, size_t length)
+{
+    if (!SYSCALL_TASK->task_is_user) return SYSCALL_RESULT_OK;
+
+    uintptr_t buffer_start = (uintptr_t)buffer;
+    uintptr_t buffer_end = buffer_start + length;
+    if (buffer_start >= KERNEL_VIRTUAL_SPACE_START) return SYSCALL_RESULT_BAD_PARAMETER;
+    if (buffer_end < buffer_start || buffer_end > KERNEL_VIRTUAL_SPACE_START) return SYSCALL_RESULT_BAD_PARAMETER;
+
+    return SYSCALL_RESULT_OK;
+}
+
+int32_t syscall_fstat()
+{
+    size_t resource_index = (size_t)SYSCALL_GET_PARAMETER(0);
+    struct stat* buf = (struct stat*)SYSCALL_GET_PARAMETER(1);
+
+    if (resource_index >= TASK_MAX_RESOURCES) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    if (syscall_validate_user_buffer(buf, sizeof(struct stat)) != SYSCALL_RESULT_OK) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+
+    resource_t* resource = SYSCALL_TASK->resources[resource_index];
+    if (!resource) return -(int32_t)SYSCALL_RESULT_FAIL;
+
+    size_t size = 0;
+    vfs_node_type node_type = VFS_NODE_TYPE_FILE;
+    if (resource->type == RESOURCE_TYPE_FILE)
+    {
+        vfs_node_t* node = (vfs_node_t*)resource->data;
+        node_type = node->type;
+        vfs_get_size(node, &size);
+    }
+
+    syscall_fill_stat(node_type, resource->type, size, buf);
+
+    return SYSCALL_RESULT_OK;
+}
+
+int32_t syscall_stat()
+{
+    const char* path = (const char*)SYSCALL_GET_PARAMETER(0);
+    struct stat* buf = (struct stat*)SYSCALL_GET_PARAMETER(1);
+
+    if (SYSCALL_TASK->task_is_user && (uintptr_t)path >= KERNEL_VIRTUAL_SPACE_START) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    if (syscall_validate_user_buffer(buf, sizeof(struct stat)) != SYSCALL_RESULT_OK) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+
+    vfs_node_t* node = NULL;
+    resource_result_t result = vfs_resolve(&vfs, path, &node);
+    if (result != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
+
+    size_t size = 0;
+    if (node->type == VFS_NODE_TYPE_FILE) vfs_get_size(node, &size);
+
+    syscall_fill_stat(node->type, node->resource_type, size, buf);
+
+    vfs_release_node(node);
+
+    return SYSCALL_RESULT_OK;
+}
+
+int32_t syscall_link()
+{
+    const char* old_path = (const char*)SYSCALL_GET_PARAMETER(0);
+    const char* new_path = (const char*)SYSCALL_GET_PARAMETER(1);
+
+    if (SYSCALL_TASK->task_is_user)
+    {
+        if ((uintptr_t)old_path >= KERNEL_VIRTUAL_SPACE_START) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+        if ((uintptr_t)new_path >= KERNEL_VIRTUAL_SPACE_START) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    }
+
+    if (vfs_link(&vfs, old_path, new_path) != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
+
+    return SYSCALL_RESULT_OK;
+}
+
+int32_t syscall_unlink()
+{
+    const char* path = (const char*)SYSCALL_GET_PARAMETER(0);
+
+    if (SYSCALL_TASK->task_is_user && (uintptr_t)path >= KERNEL_VIRTUAL_SPACE_START) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+
+    if (vfs_unlink(&vfs, path) != RESOURCE_RESULT_OK) return -(int32_t)SYSCALL_RESULT_FAIL;
+
+    return SYSCALL_RESULT_OK;
+}
+
 void syscall_handler(register_interrupt_data_t* data)
 {
     syscall.caller_task = task_manager.task_current;
@@ -514,6 +614,26 @@ void syscall_handler(register_interrupt_data_t* data)
         case SYSCALL_IOCTL:
         {
             data->eax = syscall_ioctl();
+            break;
+        }
+        case SYSCALL_FSTAT:
+        {
+            data->eax = syscall_fstat();
+            break;
+        }
+        case SYSCALL_STAT:
+        {
+            data->eax = syscall_stat();
+            break;
+        }
+        case SYSCALL_LINK:
+        {
+            data->eax = syscall_link();
+            break;
+        }
+        case SYSCALL_UNLINK:
+        {
+            data->eax = syscall_unlink();
             break;
         }
     }

@@ -1,6 +1,8 @@
 #ifndef ALURA_USER_SYSCALL_H
 #define ALURA_USER_SYSCALL_H
 
+#include "sys/stat.h"
+
 #define SYSCALL_OPEN 0
 #define SYSCALL_CLOSE 1
 #define SYSCALL_READ 2
@@ -15,6 +17,10 @@
 #define SYSCALL_LSEEK 11
 #define SYSCALL_FCNTL 12
 #define SYSCALL_IOCTL 13
+#define SYSCALL_FSTAT 14
+#define SYSCALL_STAT 15
+#define SYSCALL_LINK 16
+#define SYSCALL_UNLINK 17
 
 #define STDIN 0
 #define STDOUT 1
@@ -77,5 +83,12 @@ int isatty(int fd);
 int getpid(void);
 int lseek(int fd, int offset, int whence);
 int fcntl(int fd, int cmd, int arg);
+int ioctl(int fd, int cmd, int arg);
+int fstat(int fd, struct stat* buf);
+int stat(const char* path, struct stat* buf);
+int link(const char* old_path, const char* new_path);
+int unlink(const char* path);
+
+extern char* environ[];
 
 #endif

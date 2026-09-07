@@ -1,3 +1,4 @@
+#include <stddef.h>
 #include "syscall.h"
 
 int open(const char* path, int flags)
@@ -65,3 +66,30 @@ int fcntl(int fd, int cmd, int arg)
 {
     return syscall3(SYSCALL_FCNTL, fd, cmd, arg);
 }
+
+int ioctl(int fd, int cmd, int arg)
+{
+    return syscall3(SYSCALL_IOCTL, fd, cmd, arg);
+}
+
+int fstat(int fd, struct stat* buf)
+{
+    return syscall2(SYSCALL_FSTAT, fd, (int)buf);
+}
+
+int stat(const char* path, struct stat* buf)
+{
+    return syscall2(SYSCALL_STAT, (int)path, (int)buf);
+}
+
+int link(const char* old_path, const char* new_path)
+{
+    return syscall2(SYSCALL_LINK, (int)old_path, (int)new_path);
+}
+
+int unlink(const char* path)
+{
+    return syscall1(SYSCALL_UNLINK, (int)path);
+}
+
+char* environ[] = { NULL };

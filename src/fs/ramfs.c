@@ -11,7 +11,10 @@ vfs_node_operations_t ramfs_node_operations = (vfs_node_operations_t){
     .write = ramfs_write,
     .size = ramfs_size,
     .create = ramfs_create,
-    .truncate = ramfs_truncate
+    .truncate = ramfs_truncate,
+    .link = ramfs_link,
+    .unlink = ramfs_unlink,
+    .release = ramfs_release
 };
 
 resource_result_t ramfs_lookup(vfs_node_t* directory, const char* path, vfs_node_t** out)
@@ -19,12 +22,12 @@ resource_result_t ramfs_lookup(vfs_node_t* directory, const char* path, vfs_node
     ramfs_node_t* node = directory->fs_data;
     for (size_t i = 0; i < node->children_count; ++i)
     {
-        ramfs_node_t* child = node->children[i];
-        if (strcmp(child->name, path) == 0)
+        if (strcmp(node->children[i].name, path) == 0)
         {
+            ramfs_node_t* child = node->children[i].node;
             resource_result_t queue_result = vfs_cache_query_node(&vfs, directory->cache_index, child->id, out);
             if (queue_result == RESOURCE_RESULT_OK) return RESOURCE_RESULT_OK;
-            resource_result_t create_result = vfs_create_node(&vfs, directory, child->id, child->name, &ramfs_node_operations, child, child->type, RESOURCE_TYPE_FILE, out);
+            resource_result_t create_result = vfs_create_node(&vfs, directory, child->id, node->children[i].name, &ramfs_node_operations, child, child->type, RESOURCE_TYPE_FILE, out);
             if (create_result != RESOURCE_RESULT_OK) return create_result;
             return RESOURCE_RESULT_OK;
         }
@@ -46,9 +49,9 @@ resource_result_t ramfs_create(vfs_node_t* directory, const char* name, vfs_node
 
     ramfs_node_t* node;
     if (ramfs_create_node(&ramfs, name, type, NULL, 0, &node) != RAMFS_RESULT_OK) return RESOURCE_RESULT_ALLOCATION_ERROR;
-    if (ramfs_add_child(parent, node) != RAMFS_RESULT_OK) return RESOURCE_RESULT_ALLOCATION_ERROR;
+    if (ramfs_add_child(parent, name, node) != RAMFS_RESULT_OK) return RESOURCE_RESULT_ALLOCATION_ERROR;
 
-    return vfs_create_node(&vfs, directory, node->id, node->name, &ramfs_node_operations, node, node->type, RESOURCE_TYPE_FILE, result);
+    return vfs_create_node(&vfs, directory, node->id, name, &ramfs_node_operations, node, node->type, RESOURCE_TYPE_FILE, result);
 }
 
 resource_result_t ramfs_truncate(vfs_node_t* file)
@@ -62,14 +65,74 @@ resource_result_t ramfs_truncate(vfs_node_t* file)
     return RESOURCE_RESULT_OK;
 }
 
+resource_result_t ramfs_link(vfs_node_t* directory, const char* name, vfs_node_t* target)
+{
+    ramfs_node_t* parent = directory->fs_data;
+    ramfs_node_t* target_node = target->fs_data;
+
+    ramfs_node_t* existing;
+    if (ramfs_find_child(parent, name, &existing) == RAMFS_RESULT_OK) return RESOURCE_RESULT_ALREADY_PRESENT;
+
+    if (ramfs_add_child(parent, name, target_node) != RAMFS_RESULT_OK) return RESOURCE_RESULT_ALLOCATION_ERROR;
+
+    target_node->link_count++;
+
+    return RESOURCE_RESULT_OK;
+}
+
+resource_result_t ramfs_unlink(vfs_node_t* directory, const char* name)
+{
+    ramfs_node_t* parent = directory->fs_data;
+
+    size_t index = 0;
+    ramfs_node_t* target = NULL;
+    for (size_t i = 0; i < parent->children_count; ++i)
+    {
+        if (strcmp(parent->children[i].name, name) == 0)
+        {
+            index = i;
+            target = parent->children[i].node;
+            break;
+        }
+    }
+    if (!target) return RESOURCE_RESULT_NOT_FOUND;
+    if (target->type == VFS_NODE_TYPE_DIRECTORY) return RESOURCE_RESULT_BAD_PARAMETER;
+
+    kernel_heap_free(parent->children[index].name);
+    parent->children[index] = parent->children[parent->children_count - 1];
+    parent->children_count--;
+
+    target->link_count--;
+
+    if (target->link_count == 0)
+    {
+        vfs_node_t* cached = NULL;
+        if (vfs_cache_query_node(&vfs, directory->cache_index, target->id, &cached) != RESOURCE_RESULT_OK)
+        {
+            if (target->data) kernel_heap_free(target->data);
+            kernel_heap_free(target);
+        }
+    }
+
+    return RESOURCE_RESULT_OK;
+}
+
+void ramfs_release(vfs_node_t* file)
+{
+    ramfs_node_t* node = file->fs_data;
+    if (node->link_count > 0) return;
+
+    if (node->data) kernel_heap_free(node->data);
+    kernel_heap_free(node);
+}
+
 resource_result_t ramfs_readdir(vfs_node_t* directory, size_t index, vfs_dir_t* entry)
 {
     ramfs_node_t* node = directory->fs_data;
     if (index >= node->children_count) return RESOURCE_RESULT_NOT_FOUND;
 
-    ramfs_node_t* child = node->children[index];
-    strcpy(entry->name, child->name);
-    entry->type = child->type;
+    strcpy(entry->name, node->children[index].name);
+    entry->type = node->children[index].node->type;
 
     return RESOURCE_RESULT_OK;
 }
@@ -119,6 +182,7 @@ ramfs_result_t ramfs_create_node(ramfs_t* ramfs, const char* name, vfs_node_type
     node->type = type;
     node->data = data;
     node->data_size = data_size;
+    node->link_count = 1;
 
     *out = node;
 
@@ -179,10 +243,18 @@ resource_result_t ramfs_size(vfs_node_t* file, size_t* out_size)
     return RESOURCE_RESULT_OK;
 }
 
-ramfs_result_t ramfs_add_child(ramfs_node_t* parent, ramfs_node_t* child)
+ramfs_result_t ramfs_add_child(ramfs_node_t* parent, const char* name, ramfs_node_t* child)
 {
     if (parent->children_count >= RAMFS_NODE_MAX_CHILDREN) return RAMFS_RESULT_MAX_CHILDREN;
-    parent->children[parent->children_count++] = child;
+
+    size_t name_length = strlen(name);
+    char* name_copy = kernel_heap_malloc(name_length + 1);
+    if (!name_copy) return RAMFS_RESULT_ERROR;
+    memcpy(name_copy, name, name_length + 1);
+
+    ramfs_dirent_t* entry = &parent->children[parent->children_count++];
+    entry->name = name_copy;
+    entry->node = child;
     return RAMFS_RESULT_OK;
 }
 
@@ -190,10 +262,9 @@ ramfs_result_t ramfs_find_child(ramfs_node_t* parent, const char* name, ramfs_no
 {
     for (size_t i = 0; i < parent->children_count; ++i)
     {
-        ramfs_node_t* child = parent->children[i];
-        if (strcmp(child->name, name) == 0)
+        if (strcmp(parent->children[i].name, name) == 0)
         {
-            *out = child;
+            *out = parent->children[i].node;
             return RAMFS_RESULT_OK;
         }
     }
@@ -219,7 +290,7 @@ ramfs_result_t ramfs_get_or_create_directory(ramfs_node_t* root, char* path, ram
             result = ramfs_create_node(&ramfs, token, VFS_NODE_TYPE_DIRECTORY, NULL, 0, &child);
             if (result != RAMFS_RESULT_OK) return result;
 
-            ramfs_add_child(current, child);
+            ramfs_add_child(current, token, child);
         }
 
         current = child;
@@ -259,7 +330,7 @@ ramfs_result_t ramfs_create_path(ramfs_node_t* root, char* path, vfs_node_type t
     {
         result = ramfs_create_node(&ramfs, name, type, NULL, 0, &node);
         if (result != RAMFS_RESULT_OK) return result;
-        result = ramfs_add_child(parent, node);
+        result = ramfs_add_child(parent, name, node);
         if (result != RAMFS_RESULT_OK) return result; // todo: need to revert stuff above
     }
 

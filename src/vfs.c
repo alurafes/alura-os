@@ -40,14 +40,8 @@ resource_result_t vfs_truncate(vfs_node_t* node)
     return node->operations.truncate(node);
 }
 
-resource_result_t vfs_create(vfs_t* vfs, const char* path, vfs_node_type type, vfs_node_t** result)
+static void vfs_split_path(char* path_copy, char** out_name, const char** out_parent_path)
 {
-    if (!vfs || !path || !result) return RESOURCE_RESULT_BAD_PARAMETER;
-
-    char path_copy[VFS_NODE_NAME_LENGTH];
-    strncpy(path_copy, path, VFS_NODE_NAME_LENGTH - 1);
-    path_copy[VFS_NODE_NAME_LENGTH - 1] = '\0';
-
     char* last_slash = strrchr(path_copy, '/');
     char* name = path_copy;
     const char* parent_path = "/";
@@ -58,6 +52,22 @@ resource_result_t vfs_create(vfs_t* vfs, const char* path, vfs_node_type type, v
         name = last_slash + 1;
         if (path_copy[0] != '\0') parent_path = path_copy;
     }
+
+    *out_name = name;
+    *out_parent_path = parent_path;
+}
+
+resource_result_t vfs_create(vfs_t* vfs, const char* path, vfs_node_type type, vfs_node_t** result)
+{
+    if (!vfs || !path || !result) return RESOURCE_RESULT_BAD_PARAMETER;
+
+    char path_copy[VFS_NODE_NAME_LENGTH];
+    strncpy(path_copy, path, VFS_NODE_NAME_LENGTH - 1);
+    path_copy[VFS_NODE_NAME_LENGTH - 1] = '\0';
+
+    char* name;
+    const char* parent_path;
+    vfs_split_path(path_copy, &name, &parent_path);
 
     if (*name == '\0') return RESOURCE_RESULT_BAD_PARAMETER;
 
@@ -258,15 +268,17 @@ resource_result_t vfs_cache_try_evict(vfs_t* vfs, vfs_node_t* node)
 
     if (node_head_prev) node_head_prev->next = node_head->next;
     else cache_head->node = node_head->next;
-    
+
     kernel_heap_free(node_head);
 
     if (cache_head->node == NULL)
     {
-        if (node_head_prev) cache_head_prev->next = cache_head->next;
+        if (cache_head_prev) cache_head_prev->next = cache_head->next;
         else vfs->cache = cache_head->next;
         kernel_heap_free(cache_head);
     }
+
+    if (node->operations.release) node->operations.release(node);
 
     kernel_heap_free(node);
 
@@ -322,4 +334,86 @@ resource_result_t vfs_open(vfs_t* vfs, task_t* task, const char* path, int32_t f
     if (node->type != VFS_NODE_TYPE_FILE) return RESOURCE_RESULT_BAD_PARAMETER;
 
     return resource_register(task, node->resource_type, node, &vfs_operations, flags, result);
+}
+
+resource_result_t vfs_link(vfs_t* vfs, const char* old_path, const char* new_path)
+{
+    if (!vfs || !old_path || !new_path) return RESOURCE_RESULT_BAD_PARAMETER;
+
+    vfs_node_t* source = NULL;
+    resource_result_t resolve_result = vfs_resolve(vfs, old_path, &source);
+    if (resolve_result != RESOURCE_RESULT_OK) return resolve_result;
+
+    // only plain files can be hardlinked
+    if (source->type != VFS_NODE_TYPE_FILE || source->resource_type != RESOURCE_TYPE_FILE)
+    {
+        vfs_release_node(source);
+        return RESOURCE_RESULT_BAD_PARAMETER;
+    }
+
+    char path_copy[VFS_NODE_NAME_LENGTH];
+    strncpy(path_copy, new_path, VFS_NODE_NAME_LENGTH - 1);
+    path_copy[VFS_NODE_NAME_LENGTH - 1] = '\0';
+
+    char* name;
+    const char* parent_path;
+    vfs_split_path(path_copy, &name, &parent_path);
+
+    if (*name == '\0')
+    {
+        vfs_release_node(source);
+        return RESOURCE_RESULT_BAD_PARAMETER;
+    }
+
+    vfs_node_t* parent = NULL;
+    resolve_result = vfs_resolve(vfs, parent_path, &parent);
+    if (resolve_result != RESOURCE_RESULT_OK)
+    {
+        vfs_release_node(source);
+        return resolve_result;
+    }
+
+    if (parent->type != VFS_NODE_TYPE_DIRECTORY || !parent->operations.link)
+    {
+        vfs_release_node(parent);
+        vfs_release_node(source);
+        return RESOURCE_RESULT_BAD_PARAMETER;
+    }
+
+    resource_result_t link_result = parent->operations.link(parent, name, source);
+
+    vfs_release_node(parent);
+    vfs_release_node(source);
+
+    return link_result;
+}
+
+resource_result_t vfs_unlink(vfs_t* vfs, const char* path)
+{
+    if (!vfs || !path) return RESOURCE_RESULT_BAD_PARAMETER;
+
+    char path_copy[VFS_NODE_NAME_LENGTH];
+    strncpy(path_copy, path, VFS_NODE_NAME_LENGTH - 1);
+    path_copy[VFS_NODE_NAME_LENGTH - 1] = '\0';
+
+    char* name;
+    const char* parent_path;
+    vfs_split_path(path_copy, &name, &parent_path);
+
+    if (*name == '\0') return RESOURCE_RESULT_BAD_PARAMETER;
+
+    vfs_node_t* parent = NULL;
+    resource_result_t resolve_result = vfs_resolve(vfs, parent_path, &parent);
+    if (resolve_result != RESOURCE_RESULT_OK) return resolve_result;
+
+    if (parent->type != VFS_NODE_TYPE_DIRECTORY || !parent->operations.unlink)
+    {
+        vfs_release_node(parent);
+        return RESOURCE_RESULT_BAD_PARAMETER;
+    }
+
+    resource_result_t unlink_result = parent->operations.unlink(parent, name);
+    vfs_release_node(parent);
+
+    return unlink_result;
 }

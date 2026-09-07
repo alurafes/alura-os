@@ -3,6 +3,7 @@
 
 #include "idt.h"
 #include "memory.h"
+#include "sys/stat.h"
 
 // todo: figure out a better way
 
@@ -22,6 +23,10 @@
 #define SYSCALL_LSEEK 11
 #define SYSCALL_FCNTL 12
 #define SYSCALL_IOCTL 13
+#define SYSCALL_FSTAT 14
+#define SYSCALL_STAT 15
+#define SYSCALL_LINK 16
+#define SYSCALL_UNLINK 17
 
 #define SYSCALL_LSEEK_SET 0
 #define SYSCALL_LSEEK_CUR 1

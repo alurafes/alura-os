@@ -26,6 +26,9 @@ typedef struct vfs_node_operations_t {
     resource_result_t (*size)(vfs_node_t* file, size_t* out_size);
     resource_result_t (*create)(vfs_node_t* directory, const char* name, vfs_node_type type, vfs_node_t** result);
     resource_result_t (*truncate)(vfs_node_t* file);
+    resource_result_t (*link)(vfs_node_t* directory, const char* name, vfs_node_t* target);
+    resource_result_t (*unlink)(vfs_node_t* directory, const char* name);
+    void (*release)(vfs_node_t* node);
 } vfs_node_operations_t;
 
 typedef struct vfs_node_t {
@@ -78,6 +81,8 @@ resource_result_t vfs_get_size(vfs_node_t* node, size_t* out_size);
 resource_result_t vfs_create(vfs_t* vfs, const char* path, vfs_node_type type, vfs_node_t** result);
 resource_result_t vfs_truncate(vfs_node_t* node);
 resource_result_t vfs_open(vfs_t* vfs, task_t* task, const char* path, int32_t flags, size_t* result);
+resource_result_t vfs_link(vfs_t* vfs, const char* old_path, const char* new_path);
+resource_result_t vfs_unlink(vfs_t* vfs, const char* path);
 
 resource_result_t vfs_cache_query_node(vfs_t* vfs, size_t cache_index, int64_t id, vfs_node_t** node);
 resource_result_t vfs_cache_put(vfs_t* vfs, vfs_node_t* node);
