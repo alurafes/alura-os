@@ -4,6 +4,7 @@
 #include "idt.h"
 #include "memory.h"
 #include "sys/stat.h"
+#include "sys/times.h"
 
 // todo: figure out a better way
 
@@ -27,6 +28,7 @@
 #define SYSCALL_STAT 15
 #define SYSCALL_LINK 16
 #define SYSCALL_UNLINK 17
+#define SYSCALL_TIMES 18
 
 #define SYSCALL_LSEEK_SET 0
 #define SYSCALL_LSEEK_CUR 1

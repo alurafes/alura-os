@@ -450,6 +450,12 @@ task_t* task_manager_find_zombie_child(task_manager_t* task_manager, task_t* par
 
 void task_manager_destroy_task(task_manager_t* task_manager, task_t* task)
 {
+    if (task->parent != NULL)
+    {
+        task->parent->child_ticks_user += task->ticks_user + task->child_ticks_user;
+        task->parent->child_ticks_system += task->ticks_system + task->child_ticks_system;
+    }
+
     for (size_t i = 0; i < TASK_MAX_RESOURCES; ++i)
     {
         resource_t* resource = task->resources[i];

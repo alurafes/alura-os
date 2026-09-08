@@ -2,6 +2,7 @@
 #define ALURA_USER_SYSCALL_H
 
 #include "sys/stat.h"
+#include "sys/times.h"
 
 #define SYSCALL_OPEN 0
 #define SYSCALL_CLOSE 1
@@ -21,6 +22,7 @@
 #define SYSCALL_STAT 15
 #define SYSCALL_LINK 16
 #define SYSCALL_UNLINK 17
+#define SYSCALL_TIMES 18
 
 #define STDIN 0
 #define STDOUT 1
@@ -88,6 +90,7 @@ int fstat(int fd, struct stat* buf);
 int stat(const char* path, struct stat* buf);
 int link(const char* old_path, const char* new_path);
 int unlink(const char* path);
+clock_t times(struct tms* buf);
 
 extern char* environ[];
 

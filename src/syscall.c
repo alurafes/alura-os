@@ -519,6 +519,20 @@ int32_t syscall_unlink()
     return SYSCALL_RESULT_OK;
 }
 
+int32_t syscall_times()
+{
+    struct tms* buf = (struct tms*)SYSCALL_GET_PARAMETER(0);
+
+    if (syscall_validate_user_buffer(buf, sizeof(struct tms)) != SYSCALL_RESULT_OK) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+
+    buf->tms_utime = (clock_t)SYSCALL_TASK->ticks_user;
+    buf->tms_stime = (clock_t)SYSCALL_TASK->ticks_system;
+    buf->tms_cutime = (clock_t)SYSCALL_TASK->child_ticks_user;
+    buf->tms_cstime = (clock_t)SYSCALL_TASK->child_ticks_system;
+
+    return (int32_t)timer_get_ticks();
+}
+
 void syscall_handler(register_interrupt_data_t* data)
 {
     syscall.caller_task = task_manager.task_current;
@@ -634,6 +648,11 @@ void syscall_handler(register_interrupt_data_t* data)
         case SYSCALL_UNLINK:
         {
             data->eax = syscall_unlink();
+            break;
+        }
+        case SYSCALL_TIMES:
+        {
+            data->eax = syscall_times();
             break;
         }
     }

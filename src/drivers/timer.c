@@ -12,8 +12,15 @@ void timer_set_phase()
 
 void timer_irq_handler(register_interrupt_data_t* data)
 {
-    (void)data;
     timer_ticks++;
+
+    task_t* current = task_manager.task_current;
+    if (current != NULL)
+    {
+        if (data->cs == TASK_MANAGER_KERNEL_CODE_SELECTOR) current->ticks_system++;
+        else current->ticks_user++;
+    }
+
     task_manager_schedule(&task_manager);
 }
 

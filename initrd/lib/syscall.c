@@ -92,4 +92,9 @@ int unlink(const char* path)
     return syscall1(SYSCALL_UNLINK, (int)path);
 }
 
+clock_t times(struct tms* buf)
+{
+    return syscall1(SYSCALL_TIMES, (int)buf);
+}
+
 char* environ[] = { NULL };

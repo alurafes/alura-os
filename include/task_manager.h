@@ -90,6 +90,11 @@ typedef struct task_t {
     void* wait_object;
     uintptr_t heap_start;
     uintptr_t heap_break;
+
+    uint64_t ticks_user;
+    uint64_t ticks_system;
+    uint64_t child_ticks_user;
+    uint64_t child_ticks_system;
 } task_t;
 
 typedef struct task_manager_t {
