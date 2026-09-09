@@ -95,6 +95,11 @@ typedef struct task_t {
     uint64_t ticks_system;
     uint64_t child_ticks_user;
     uint64_t child_ticks_system;
+
+    void (*signal_handlers[SYSCALL_NSIG])(int);
+    register_interrupt_data_t saved_signal_frame;
+    uint8_t in_signal_handler;
+    uint8_t saved_syscall_retry;
 } task_t;
 
 typedef struct task_manager_t {
@@ -133,6 +138,8 @@ task_t* task_manager_create_idle_task(task_manager_t* task_manager);
 task_t* task_manager_pick_task(task_manager_t* task_manager);
 task_t* task_manager_find_child(task_manager_t* task_manager, task_t* parent, uint32_t pid);
 task_t* task_manager_find_zombie_child(task_manager_t* task_manager, task_t* parent);
+task_t* task_manager_find_task(task_manager_t* task_manager, uint32_t pid);
+void task_manager_deliver_signal(task_t* target, int32_t sig, void (*handler)(int));
 uint32_t task_manager_calculate_time_slice(uint32_t queue_level);
 void task_manager_boost_priority_of_all_tasks(task_manager_t* task_manager);
 task_manager_result_t task_manager_yield_current(task_manager_t* task_manager);

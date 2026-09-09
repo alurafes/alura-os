@@ -156,6 +156,12 @@ elf_result_t elf_load_into_task(task_t* task, const char* path, char* const argv
     task->heap_start = heap_start;
     task->heap_break = heap_start;
 
+    // resetting custom handlers, but keeping ignores
+    for (size_t i = 0; i < SYSCALL_NSIG; ++i)
+    {
+        if (task->signal_handlers[i] != SYSCALL_SIG_IGN) task->signal_handlers[i] = SYSCALL_SIG_DFL;
+    }
+
     bounce_free((uintptr_t)new_task_page_directory);
 
     memory_paging_queue_to_destroy(current_page_directory_phys);

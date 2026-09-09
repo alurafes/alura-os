@@ -148,6 +148,8 @@ task_t* task_manager_task_copy(task_manager_t* task_manager, task_t* parent, uin
     task->heap_start = parent->heap_start;
     task->heap_break = parent->heap_break;
 
+    memcpy(task->signal_handlers, parent->signal_handlers, sizeof(task->signal_handlers));
+
     memory_paging_create_page_directory(&task->task_cr3); // todo: panic!!
     page_entry_t* task_page_directory = bounce_alloc(task->task_cr3);
 
@@ -339,6 +341,15 @@ task_manager_result_t task_manager_remove_child_from_task(task_t* parent, task_t
 
 task_manager_result_t task_manager_exit_task(task_manager_t* task_manager, task_t* task, int32_t return_code)
 {
+    if (task->task_state == TASK_STATE_READY)
+    {
+        task_manager_remove_task_from_queue(task_manager, task->task_queue_level, task);
+    }
+    else if (task->task_state == TASK_STATE_BLOCKED)
+    {
+        task_manager_remove_task_from_queue(task_manager, TASK_MANAGER_QUEUE_INDEX_BLOCKED, task);
+    }
+
     task->task_state = TASK_STATE_ZOMBIE;
     task->return_code = return_code;
 
@@ -368,7 +379,19 @@ task_manager_result_t task_manager_exit_task(task_manager_t* task_manager, task_
     }
 
     task->children = NULL;
-    
+
+    task_t* parent = task->parent;
+    if (
+        parent != NULL &&
+        parent->task_state == TASK_STATE_BLOCKED &&
+        parent->wait_reason == TASK_WAIT_REASON_CHILD &&
+        (parent->wait_object == (void*)task->task_id ||
+        parent->wait_object == (void*)-1)
+    )
+    {
+        task_manager_unblock_task(task_manager, parent);
+    }
+
     task_manager_enqueue_task(task_manager, TASK_MANAGER_QUEUE_INDEX_ZOMBIE, task);
 
     return TASK_MANAGER_RESULT_OK;
@@ -446,6 +469,122 @@ task_t* task_manager_find_zombie_child(task_manager_t* task_manager, task_t* par
     }
 
     return NULL;
+}
+
+static task_t* task_manager_find_task_recursive(task_t* root, uint32_t pid)
+{
+    if (root->task_id == pid) return root;
+
+    task_node_t* head = root->children;
+    while (head != NULL)
+    {
+        task_t* found = task_manager_find_task_recursive(head->task, pid);
+        if (found != NULL) return found;
+        head = head->next;
+    }
+
+    return NULL;
+}
+
+task_t* task_manager_find_task(task_manager_t* task_manager, uint32_t pid)
+{
+    return task_manager_find_task_recursive(task_manager->task_init, pid);
+}
+
+static void task_manager_copy_memory(page_entry_t* target_cr3_phys, uintptr_t target_vaddr, void* buffer, size_t length, uint8_t to_target)
+{
+    uint8_t* buf = (uint8_t*)buffer;
+    size_t done = 0;
+
+    while (done < length)
+    {
+        uintptr_t physical = memory_paging_virtual_to_physical(target_cr3_phys, target_vaddr + done);
+        if (physical == 0) return;
+
+        uintptr_t page_physical = ALIGN_DOWN(physical);
+        uintptr_t page_offset = physical - page_physical;
+
+        size_t chunk = PAGE_SIZE - page_offset;
+        if (chunk > length - done) chunk = length - done;
+
+        uint8_t* mapped = (uint8_t*)bounce_alloc(page_physical);
+        if (to_target) memcpy(mapped + page_offset, buf + done, chunk);
+        else memcpy(buf + done, mapped + page_offset, chunk);
+        bounce_free((uintptr_t)mapped);
+
+        done += chunk;
+    }
+}
+
+static uint8_t task_manager_user_range_mapped(page_entry_t* target_cr3_phys, uintptr_t vaddr, size_t length)
+{
+    uintptr_t start = ALIGN_DOWN(vaddr);
+    uintptr_t end = ALIGN_UP(vaddr + length);
+
+    for (uintptr_t page = start; page < end; page += PAGE_SIZE)
+    {
+        // memory_paging_virtual_to_physical returns 0 if not present
+        if (memory_paging_virtual_to_physical(target_cr3_phys, page) == 0) return 0;
+    }
+
+    return 1;
+}
+
+void task_manager_deliver_signal(task_t* target, int32_t sig, void (*handler)(int))
+{
+    uint8_t trampoline[9] = {
+        0xB8, // load into eax
+        (uint8_t)(SYSCALL_SIGRETURN),
+        (uint8_t)(SYSCALL_SIGRETURN >> 8),
+        (uint8_t)(SYSCALL_SIGRETURN >> 16),
+        (uint8_t)(SYSCALL_SIGRETURN >> 24),
+        0xCD, 0x80, // int 0x80
+        0xEB, 0xFE  // jmp $ never reached
+    };
+    uint32_t frame_size = sizeof(trampoline) + 8; // + sig + return address
+
+    uint8_t is_self = (target == task_manager.task_current);
+    page_entry_t* target_cr3 = (page_entry_t*)target->task_cr3;
+
+    register_interrupt_data_t frame;
+    if (is_self) frame = *syscall.current_register_data;
+    else task_manager_copy_memory(target_cr3, (uintptr_t)target->task_esp, &frame, sizeof(frame), 0);
+
+    uint32_t trampoline_addr = frame.useresp - sizeof(trampoline);
+    uint32_t arg_addr = trampoline_addr - 4;
+    uint32_t retaddr_addr = arg_addr - 4;
+
+    if (frame.useresp < frame_size || !task_manager_user_range_mapped(target_cr3, retaddr_addr, frame_size))
+    {
+        // screw the task if the stack is filled with crap 
+        task_manager_exit_task(&task_manager, target, sig & 0x7f);
+        if (is_self) task_manager_yield_current(&task_manager);
+        return;
+    }
+
+    target->saved_signal_frame = frame;
+    target->in_signal_handler = 1;
+    target->saved_syscall_retry = target->syscall_retry;
+    target->syscall_retry = 0;
+
+    frame.useresp = retaddr_addr;
+    frame.eip = (uint32_t)handler;
+
+    if (is_self)
+    {
+        memcpy((void*)trampoline_addr, trampoline, sizeof(trampoline));
+        *(int32_t*)arg_addr = sig;
+        *(uint32_t*)retaddr_addr = trampoline_addr;
+
+        *syscall.current_register_data = frame;
+        return;
+    }
+
+    task_manager_copy_memory(target_cr3, trampoline_addr, trampoline, sizeof(trampoline), 1);
+    task_manager_copy_memory(target_cr3, arg_addr, &sig, sizeof(sig), 1);
+    task_manager_copy_memory(target_cr3, retaddr_addr, &trampoline_addr, sizeof(trampoline_addr), 1);
+
+    task_manager_copy_memory(target_cr3, (uintptr_t)target->task_esp, &frame, sizeof(frame), 1);
 }
 
 void task_manager_destroy_task(task_manager_t* task_manager, task_t* task)

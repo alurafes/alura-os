@@ -5,6 +5,8 @@
 #include "memory.h"
 #include "sys/stat.h"
 #include "sys/times.h"
+#include "sys/wait.h"
+#include "signal.h"
 
 // todo: figure out a better way
 
@@ -29,6 +31,9 @@
 #define SYSCALL_LINK 16
 #define SYSCALL_UNLINK 17
 #define SYSCALL_TIMES 18
+#define SYSCALL_KILL 19
+#define SYSCALL_SIGACTION 20
+#define SYSCALL_SIGRETURN 21
 
 #define SYSCALL_LSEEK_SET 0
 #define SYSCALL_LSEEK_CUR 1

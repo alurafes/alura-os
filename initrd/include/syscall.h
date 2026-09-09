@@ -3,6 +3,8 @@
 
 #include "sys/stat.h"
 #include "sys/times.h"
+#include "sys/wait.h"
+#include "signal.h"
 
 #define SYSCALL_OPEN 0
 #define SYSCALL_CLOSE 1
@@ -23,6 +25,9 @@
 #define SYSCALL_LINK 16
 #define SYSCALL_UNLINK 17
 #define SYSCALL_TIMES 18
+#define SYSCALL_KILL 19
+#define SYSCALL_SIGACTION 20
+#define SYSCALL_SIGRETURN 21
 
 #define STDIN 0
 #define STDOUT 1
@@ -91,6 +96,10 @@ int stat(const char* path, struct stat* buf);
 int link(const char* old_path, const char* new_path);
 int unlink(const char* path);
 clock_t times(struct tms* buf);
+int kill(int pid, int sig);
+int raise(int sig);
+int sigaction(int sig, const struct sigaction* act, struct sigaction* oldact);
+void (*signal(int sig, void (*handler)(int)))(int);
 
 extern char* environ[];
 

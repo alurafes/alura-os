@@ -1,4 +1,5 @@
 #include "syscall.h"
+#include "signal.h"
 
 static int str_to_int(const char* s)
 {
@@ -40,6 +41,13 @@ static int int_to_str(int value, char* buf)
     return len;
 }
 
+static void sigfpe_handler(int sig)
+{
+    (void)sig;
+    write(STDOUT, "calc: division by zero\n", 24);
+    exit(1);
+}
+
 int main(int argc, char** argv)
 {
     if (argc < 4)
@@ -57,6 +65,8 @@ int main(int argc, char** argv)
         write(STDOUT, "usage: calc <a> <+|-|*|/> <b>\n", 30);
         return 1;
     }
+
+    signal(SIGFPE, sigfpe_handler);
 
     int result = 0;
     switch (op)

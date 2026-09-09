@@ -97,4 +97,31 @@ clock_t times(struct tms* buf)
     return syscall1(SYSCALL_TIMES, (int)buf);
 }
 
+int kill(int pid, int sig)
+{
+    return syscall2(SYSCALL_KILL, pid, sig);
+}
+
+int raise(int sig)
+{
+    return kill(getpid(), sig);
+}
+
+int sigaction(int sig, const struct sigaction* act, struct sigaction* oldact)
+{
+    return syscall3(SYSCALL_SIGACTION, sig, (int)act, (int)oldact);
+}
+
+void (*signal(int sig, void (*handler)(int)))(int)
+{
+    struct sigaction act;
+    struct sigaction oldact;
+
+    act.sa_handler = handler;
+
+    if (sigaction(sig, &act, &oldact) < 0) return SIG_ERR;
+
+    return oldact.sa_handler;
+}
+
 char* environ[] = { NULL };

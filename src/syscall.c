@@ -169,20 +169,8 @@ int32_t syscall_exit()
 {
     int32_t return_code = (int32_t)SYSCALL_GET_PARAMETER(0);
 
-    task_t *parent = SYSCALL_TASK->parent;
-
-    if (
-        parent != NULL &&
-        parent->task_state == TASK_STATE_BLOCKED &&
-        parent->wait_reason == TASK_WAIT_REASON_CHILD &&
-        (parent->wait_object == (void*)SYSCALL_TASK->task_id ||
-        parent->wait_object == (void*)-1)
-    )
-    {
-        task_manager_unblock_task(&task_manager, parent);
-    }
-
-    task_manager_exit_task(&task_manager, SYSCALL_TASK, return_code);
+    // normal termination - 0-7 bits are zero
+    task_manager_exit_task(&task_manager, SYSCALL_TASK, (return_code & 0xff) << 8);
     task_manager_yield_current(&task_manager);
 
     return SYSCALL_RESULT_OK;
@@ -533,6 +521,82 @@ int32_t syscall_times()
     return (int32_t)timer_get_ticks();
 }
 
+int32_t syscall_kill()
+{
+    int32_t pid = (int32_t)SYSCALL_GET_PARAMETER(0);
+    int32_t sig = (int32_t)SYSCALL_GET_PARAMETER(1);
+
+    if (pid <= 0) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    if (sig < 0 || sig >= SYSCALL_NSIG) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+
+    task_t* target = task_manager_find_task(&task_manager, (uint32_t)pid);
+    if (target == NULL) return -(int32_t)SYSCALL_RESULT_FAIL;
+
+    if (sig == 0) return SYSCALL_RESULT_OK;
+
+    if (target->task_state == TASK_STATE_ZOMBIE || target->task_state == TASK_STATE_TERMINATED)
+    {
+        return SYSCALL_RESULT_OK;
+    }
+
+    void (*handler)(int) = target->signal_handlers[sig];
+
+    if (handler == SYSCALL_SIG_IGN) return SYSCALL_RESULT_OK;
+
+    if (handler == SYSCALL_SIG_DFL)
+    {
+        // terminate by default, also setting 0x7f to mark that the task was killed by a signal
+        task_manager_exit_task(&task_manager, target, sig & 0x7f);
+        if (target == SYSCALL_TASK) task_manager_yield_current(&task_manager);
+        return SYSCALL_RESULT_OK;
+    }
+
+    if (target->task_state == TASK_STATE_BLOCKED)
+    {
+        task_manager_unblock_task(&task_manager, target);
+    }
+
+    task_manager_deliver_signal(target, sig, handler);
+
+    return SYSCALL_RESULT_OK;
+}
+
+int32_t syscall_sigaction()
+{
+    int32_t sig = (int32_t)SYSCALL_GET_PARAMETER(0);
+    struct sigaction* action = (struct sigaction*)SYSCALL_GET_PARAMETER(1);
+    struct sigaction* old_action = (struct sigaction*)SYSCALL_GET_PARAMETER(2);
+
+    if (sig <= 0 || sig >= SYSCALL_NSIG) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    if (sig == SYSCALL_SIGKILL) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+
+    if (action != NULL && syscall_validate_user_buffer(action, sizeof(struct sigaction)) != SYSCALL_RESULT_OK) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+    if (old_action != NULL && syscall_validate_user_buffer(old_action, sizeof(struct sigaction)) != SYSCALL_RESULT_OK) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+
+    if (old_action != NULL)
+    {
+        old_action->sa_handler = SYSCALL_TASK->signal_handlers[sig];
+    }
+
+    if (action != NULL)
+    {
+        SYSCALL_TASK->signal_handlers[sig] = action->sa_handler;
+    }
+
+    return SYSCALL_RESULT_OK;
+}
+
+int32_t syscall_sigreturn()
+{
+    if (SYSCALL_TASK->in_signal_handler)
+    {
+        *syscall.current_register_data = SYSCALL_TASK->saved_signal_frame;
+        SYSCALL_TASK->in_signal_handler = 0;
+    }
+
+    return (int32_t)syscall.current_register_data->eax;
+}
+
 void syscall_handler(register_interrupt_data_t* data)
 {
     syscall.caller_task = task_manager.task_current;
@@ -653,6 +717,21 @@ void syscall_handler(register_interrupt_data_t* data)
         case SYSCALL_TIMES:
         {
             data->eax = syscall_times();
+            break;
+        }
+        case SYSCALL_KILL:
+        {
+            data->eax = syscall_kill();
+            break;
+        }
+        case SYSCALL_SIGACTION:
+        {
+            data->eax = syscall_sigaction();
+            break;
+        }
+        case SYSCALL_SIGRETURN:
+        {
+            data->eax = syscall_sigreturn();
             break;
         }
     }
