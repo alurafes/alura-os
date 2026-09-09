@@ -1,4 +1,5 @@
-#include <stddef.h>
+#include <stdio.h>
+#include <string.h>
 #include "syscall.h"
 
 static const char keymap[128] =
@@ -50,83 +51,50 @@ static const char keymap_shift[128] =
 };
 
 #define LINE_MAX 256
+#define ARGV_MAX 16
 
-static void write_char(int fd, char c)
+static void put_char(char c)
 {
     write(STDOUT, &c, 1);
 }
 
-static int str_len(const char* s)
+static void put_str(const char* s)
 {
-    int n = 0;
-    while (s[n]) n++;
-    return n;
+    write(STDOUT, s, strlen(s));
 }
-
-static void write_str(int fd, const char* s)
-{
-    write(STDOUT, s, str_len(s));
-}
-
-static int str_eq(const char* a, const char* b)
-{
-    while (*a && *b)
-    {
-        if (*a != *b) return 0;
-        a++;
-        b++;
-    }
-    return *a == *b;
-}
-
-#define ARGV_MAX 16
 
 static int parse_args(char* line, char* argv[])
 {
     int argc = 0;
-    char* p = line;
-
-    while (*p && argc < ARGV_MAX - 1)
+    char* tok = strtok(line, " ");
+    while (tok != NULL && argc < ARGV_MAX - 1)
     {
-        while (*p == ' ') p++;
-        if (!*p) break;
-
-        argv[argc++] = p;
-
-        while (*p && *p != ' ') p++;
-        if (*p)
-        {
-            *p = 0;
-            p++;
-        }
+        argv[argc++] = tok;
+        tok = strtok(NULL, " ");
     }
-
     argv[argc] = NULL;
     return argc;
 }
 
-static void run_command(int fd, char* line)
+static void run_command(char* line)
 {
     char* argv[ARGV_MAX];
     int argc = parse_args(line, argv);
     if (argc == 0) return;
 
-    if (str_eq(argv[0], "exit"))
+    if (strcmp(argv[0], "exit") == 0)
     {
         exit(0);
-        return;
     }
 
     int pid = fork();
     if (pid == 0)
     {
-        int exec = execve(argv[0], argv);
-        if (exec < 0)
+        int result = execve(argv[0], argv);
+        if (result < 0)
         {
-            write_str(fd, "unknown command: ");
-            write_str(fd, argv[0]);
-            write_char(fd, '\n');
-            exit(exec);
+            fprintf(stderr, "unknown command: %s\n", argv[0]);
+            exit(result);
         }
     }
     else
@@ -137,7 +105,7 @@ static void run_command(int fd, char* line)
 
 int main(int argc, char** argv)
 {
-    write_str(STDOUT, "> ");
+    put_str("> ");
 
     char line[LINE_MAX];
     int line_length = 0;
@@ -148,7 +116,7 @@ int main(int argc, char** argv)
         unsigned char scancode;
         int r = read(STDIN, &scancode, 1);
         if (r <= 0) continue;
-        
+
         unsigned char released = scancode & 0x80;
         unsigned char key = scancode & 0x7F;
 
@@ -168,7 +136,7 @@ int main(int argc, char** argv)
             if (line_length > 0)
             {
                 line_length--;
-                write_char(STDOUT, character);
+                put_char(character);
             }
             continue;
         }
@@ -176,19 +144,19 @@ int main(int argc, char** argv)
         if (character == '\n')
         {
             line[line_length] = 0;
-            write_char(STDOUT, character);
+            put_char(character);
 
-            run_command(STDOUT, line);
+            run_command(line);
 
             line_length = 0;
-            write_str(STDOUT, "> ");
+            put_str("> ");
             continue;
         }
 
         if (line_length < LINE_MAX - 1)
         {
             line[line_length++] = character;
-            write_char(STDOUT, character);
+            put_char(character);
         }
     }
 

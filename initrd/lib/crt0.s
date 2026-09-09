@@ -10,8 +10,7 @@ _start:
     push ebx
     push eax
     call main
-
-    add esp, 12
+    add esp, 8
 
     push eax
     call exit

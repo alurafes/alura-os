@@ -1,10 +1,10 @@
-CC      := gcc
-LD      := ld
-AS      := nasm
+TOOLCHAIN := $(HOME)/opt/cross-alura/bin
+CC        := $(TOOLCHAIN)/i686-elf-gcc
+AS        := nasm
 
-CFLAGS  := -m32 -ffreestanding -fno-pic -fno-pie -nostartfiles -nodefaultlibs -nostdlib -Iinclude
+CFLAGS  := -ffreestanding -nostartfiles -Iinclude
 ASFLAGS := -f elf32
-LDFLAGS := -m elf_i386 -n -T linker.ld
+LDFLAGS := -ffreestanding -nostartfiles -T linker.ld
 
 BUILDDIR := build
 BINDIR   := initrd/bin
@@ -14,8 +14,8 @@ OBJS := $(patsubst src/%.c,$(BUILDDIR)/%.o,$(SRCS))
 ELFS := $(patsubst src/%.c,$(BINDIR)/%.elf,$(SRCS))
 
 CRT0_OBJ := $(BUILDDIR)/lib/crt0.o
-LIBC_OBJ := $(BUILDDIR)/lib/syscall.o
-STARTUP_OBJS := $(CRT0_OBJ) $(LIBC_OBJ)
+LIBC_OBJS := $(BUILDDIR)/lib/syscall.o $(BUILDDIR)/lib/newlib_glue.o
+STARTUP_OBJS := $(CRT0_OBJ) $(LIBC_OBJS)
 
 all: $(ELFS)
 
@@ -33,7 +33,7 @@ $(BUILDDIR)/lib/%.o: lib/%.s
 
 $(BINDIR)/%.elf: $(BUILDDIR)/%.o $(STARTUP_OBJS)
 	@mkdir -p $(dir $@)
-	$(LD) $(LDFLAGS) $(CRT0_OBJ) $< $(LIBC_OBJ) -o $@
+	$(CC) $(LDFLAGS) $(CRT0_OBJ) $< $(LIBC_OBJS) -o $@
 
 clean:
 	rm -rf $(BUILDDIR) $(BINDIR)
