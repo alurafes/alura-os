@@ -1,6 +1,7 @@
 #include "fs/devfs.h"
 
 #include "drivers/keyboard.h"
+#include "drivers/framebuffer.h"
 #include "terminal.h"
 #include "libc/string.h"
 
@@ -15,6 +16,7 @@ typedef struct devfs_entry_t {
 static devfs_entry_t devfs_entries[] = {
     { "keyboard", { .read = keyboard_read }, &keyboard, RESOURCE_TYPE_KEYBOARD },
     { "terminal", { .write = terminal_write }, &terminal, RESOURCE_TYPE_TERMINAL },
+    { "framebuffer", { .write = framebuffer_dev_write, .ioctl = framebuffer_dev_ioctl }, &framebuffer, RESOURCE_TYPE_FRAMEBUFFER },
 };
 
 #define DEVFS_ENTRY_COUNT (sizeof(devfs_entries) / sizeof(devfs_entries[0]))

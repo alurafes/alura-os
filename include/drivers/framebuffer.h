@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include "text_display_driver.h"
 #include "io.h"
+#include "vfs.h"
 
 typedef enum framebuffer_result_t {
     FRAMEBUFFER_RESULT_OK = 0
@@ -47,6 +48,9 @@ void framebuffer_set_cursor(text_display_driver_t* driver, unsigned int x, unsig
 void framebuffer_get_dimensions(text_display_driver_t* driver, unsigned int* width, unsigned int* height);
 void framebuffer_put_pixel(framebuffer_t* framebuffer, unsigned int x, unsigned int y, uint8_t r, uint8_t g, uint8_t b);
 void framebuffer_blit(framebuffer_t* framebuffer, int dest_x, int dest_y, framebuffer_sprite_t* source);
+
+resource_result_t framebuffer_dev_write(vfs_node_t* file, size_t offset, void* buffer, size_t length, size_t* written_bytes);
+resource_result_t framebuffer_dev_ioctl(vfs_node_t* file, int32_t command, int32_t argument);
 
 extern framebuffer_t framebuffer;
 void framebuffer_driver_init(multiboot_info_t* multiboot);

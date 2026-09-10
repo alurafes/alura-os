@@ -28,6 +28,7 @@ typedef struct vfs_node_operations_t {
     resource_result_t (*truncate)(vfs_node_t* file);
     resource_result_t (*link)(vfs_node_t* directory, const char* name, vfs_node_t* target);
     resource_result_t (*unlink)(vfs_node_t* directory, const char* name);
+    resource_result_t (*ioctl)(vfs_node_t* file, int32_t command, int32_t argument);
     void (*release)(vfs_node_t* node);
 } vfs_node_operations_t;
 

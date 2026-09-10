@@ -3,6 +3,8 @@
 
 #include "memory.h"
 #include "memory_paging.h"
+#include "libc/string.h"
+#include "sys/ioctl.h"
 
 framebuffer_t framebuffer;
 void framebuffer_driver_init(multiboot_info_t* multiboot)
@@ -185,4 +187,60 @@ void framebuffer_get_dimensions(text_display_driver_t* driver, unsigned int* wid
 
     if (width != NULL) *width = framebuffer->width / FONT8X8_WIDTH;
     if (height != NULL) *height = framebuffer->height / FONT8X8_HEIGHT;
+}
+
+static int framebuffer_is_valid_user_pointer(uint32_t pointer, size_t length)
+{
+    uint32_t end = pointer + (uint32_t)length;
+    if (end < pointer) return 0;
+    return end <= KERNEL_VIRTUAL_SPACE_START;
+}
+
+resource_result_t framebuffer_dev_write(vfs_node_t* file, size_t offset, void* buffer, size_t length, size_t* written_bytes)
+{
+    framebuffer_t* framebuffer = (framebuffer_t*)file->fs_data;
+
+    if (offset >= framebuffer->size)
+    {
+        if (written_bytes != NULL) *written_bytes = 0;
+        return RESOURCE_RESULT_OK;
+    }
+
+    size_t available = framebuffer->size - offset;
+    size_t to_write = length < available ? length : available;
+
+    memcpy((void*)(framebuffer->address + offset), buffer, to_write);
+
+    if (written_bytes != NULL) *written_bytes = to_write;
+
+    return RESOURCE_RESULT_OK;
+}
+
+resource_result_t framebuffer_dev_ioctl(vfs_node_t* file, int32_t command, int32_t argument)
+{
+    framebuffer_t* framebuffer = (framebuffer_t*)file->fs_data;
+
+    switch (command)
+    {
+        case FBIOGET_INFO:
+        {
+            if (!framebuffer_is_valid_user_pointer((uint32_t)argument, sizeof(struct fb_info))) return RESOURCE_RESULT_BAD_PARAMETER;
+
+            struct fb_info* info = (struct fb_info*)argument;
+            info->width = framebuffer->width;
+            info->height = framebuffer->height;
+            info->pitch = framebuffer->pitch;
+            info->bpp = framebuffer->bpp;
+            info->size = framebuffer->size;
+            info->red_field_position = framebuffer->red_field_position;
+            info->green_field_position = framebuffer->green_field_position;
+            info->blue_field_position = framebuffer->blue_field_position;
+
+            return RESOURCE_RESULT_OK;
+        }
+        default:
+        {
+            return RESOURCE_RESULT_BAD_PARAMETER;
+        }
+    }
 }

@@ -8,6 +8,7 @@ resource_operations_t vfs_operations = {
     .close = vfs_close,
     .read = vfs_read,
     .write = vfs_write,
+    .ioctl = vfs_ioctl,
 };
 
 vfs_t vfs;
@@ -311,6 +312,16 @@ resource_result_t vfs_write(resource_t* resource, size_t offset, void* buffer, s
     if (!node->operations.write) return RESOURCE_RESULT_BAD_PARAMETER;
 
     return node->operations.write(node, offset, buffer, length, written_bytes);
+}
+
+resource_result_t vfs_ioctl(resource_t* resource, int32_t command, int32_t argument)
+{
+    if (!resource) return RESOURCE_RESULT_BAD_PARAMETER;
+    vfs_node_t* node = resource->data;
+
+    if (!node->operations.ioctl) return RESOURCE_RESULT_BAD_PARAMETER;
+
+    return node->operations.ioctl(node, command, argument);
 }
 
 resource_result_t vfs_open(vfs_t* vfs, task_t* task, const char* path, int32_t flags, size_t* result)

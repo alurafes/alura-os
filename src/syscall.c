@@ -401,6 +401,8 @@ int32_t syscall_ioctl()
     int32_t command = (int32_t)SYSCALL_GET_PARAMETER(1);
     int32_t argument = (int32_t)SYSCALL_GET_PARAMETER(2);
 
+    if (resource_index >= TASK_MAX_RESOURCES) return -(int32_t)SYSCALL_RESULT_BAD_PARAMETER;
+
     resource_t* resource = SYSCALL_TASK->resources[resource_index];
     if (!resource) return -(int32_t)SYSCALL_RESULT_FAIL;
     if (resource->operations.ioctl == NULL) return -(int32_t)SYSCALL_RESULT_FAIL;
@@ -414,7 +416,7 @@ static void syscall_fill_stat(vfs_node_type node_type, resource_type_t resource_
 
     // hardcoding mod for now
     if (node_type == VFS_NODE_TYPE_DIRECTORY) out->st_mode = S_IFDIR | 0755;
-    else if (resource_type == RESOURCE_TYPE_KEYBOARD || resource_type == RESOURCE_TYPE_TERMINAL) out->st_mode = S_IFCHR | 0666;
+    else if (resource_type == RESOURCE_TYPE_KEYBOARD || resource_type == RESOURCE_TYPE_TERMINAL || resource_type == RESOURCE_TYPE_FRAMEBUFFER) out->st_mode = S_IFCHR | 0666;
     else out->st_mode = S_IFREG | 0644;
 
     out->st_size = (uint32_t)size;

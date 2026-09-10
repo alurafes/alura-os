@@ -21,7 +21,8 @@ typedef enum resource_result_t {
 typedef enum resource_type_t {
     RESOURCE_TYPE_FILE = 0,
     RESOURCE_TYPE_KEYBOARD,
-    RESOURCE_TYPE_TERMINAL
+    RESOURCE_TYPE_TERMINAL,
+    RESOURCE_TYPE_FRAMEBUFFER
 } resource_type_t;
 
 typedef struct resource_t resource_t;
